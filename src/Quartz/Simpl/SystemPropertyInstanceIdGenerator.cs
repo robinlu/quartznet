@@ -1,4 +1,6 @@
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 using Quartz.Spi;
 
@@ -16,16 +18,16 @@ namespace Quartz.Simpl
         /// </summary>
         public const string SystemProperty = "quartz.scheduler.instanceId";
 
-        private string prepend;
-        private string postpend;
+        private string? prepend;
+        private string? postpend;
         private string systemPropertyName = SystemProperty;
 
         /// <summary>
         /// Returns the cluster wide value for this scheduler instance's id, based on a system property.
         /// </summary>
-        public string GenerateInstanceId()
+        public Task<string?> GenerateInstanceId(CancellationToken cancellationToken = default)
         {
-            string property = Environment.GetEnvironmentVariable(SystemPropertyName);
+            var property = Environment.GetEnvironmentVariable(SystemPropertyName);
             if (property == null)
             {
                 throw new SchedulerException("No value for '" + SystemProperty + "' system property found, please configure your environment accordingly!");
@@ -37,28 +39,28 @@ namespace Quartz.Simpl
             }
             if (Postpend != null)
             {
-                property = property + Postpend;
+                property += Postpend;
             }
 
-            return property;
+            return Task.FromResult<string?>(property);
         }
 
         /// <summary>
         /// A string of text to prepend (add to the beginning) to the instanceId found in the system property.
         /// </summary>
-        public string Prepend
+        public string? Prepend
         {
-            get { return prepend; }
-            set { prepend = value == null ? null : value.Trim(); }
+            get => prepend;
+            set => prepend = value?.Trim();
         }
 
         /// <summary>
         /// A string of text to postpend (add to the end) to the instanceId found in the system property.
         /// </summary>
-        public string Postpend
+        public string? Postpend
         {
-            get { return postpend; }
-            set { postpend = value == null ? null : value.Trim(); }
+            get => postpend;
+            set => postpend = value?.Trim();
         }
 
         /// <summary>
@@ -69,8 +71,8 @@ namespace Quartz.Simpl
         /// </remarks>
         public string SystemPropertyName
         {
-            get { return systemPropertyName; }
-            set { systemPropertyName = value == null ? SystemProperty : value.Trim(); }
+            get => systemPropertyName;
+            set => systemPropertyName = value?.Trim() ?? SystemProperty;
         }
     }
 }

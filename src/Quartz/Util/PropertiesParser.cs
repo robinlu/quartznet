@@ -1,19 +1,19 @@
 #region License
-/* 
- * All content copyright Terracotta, Inc., unless otherwise indicated. All rights reserved. 
- * 
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not 
- * use this file except in compliance with the License. You may obtain a copy 
- * of the License at 
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0 
- *   
- * Unless required by applicable law or agreed to in writing, software 
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT 
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
- * License for the specific language governing permissions and limitations 
+/*
+ * All content copyright Marko Lahma, unless otherwise indicated. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy
+ * of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
  * under the License.
- * 
+ *
  */
 #endregion
 
@@ -23,6 +23,7 @@ using System.Collections.Specialized;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 
 namespace Quartz.Util
 {
@@ -39,12 +40,9 @@ namespace Quartz.Util
         /// Gets the underlying properties.
         /// </summary>
         /// <value>The underlying properties.</value>
-		public virtual NameValueCollection UnderlyingProperties
-		{
-			get { return props; }
-		}
+		public virtual NameValueCollection UnderlyingProperties => props;
 
-        /// <summary>
+	    /// <summary>
         /// Initializes a new instance of the <see cref="PropertiesParser"/> class.
         /// </summary>
         /// <param name="props">The props.</param>
@@ -58,14 +56,10 @@ namespace Quartz.Util
         /// </summary>
         /// <param name="name">The name.</param>
         /// <returns></returns>
-		public virtual string GetStringProperty(string name)
+		public virtual string? GetStringProperty(string? name)
 		{
 			string val = props.Get(name);
-			if (val == null)
-			{
-				return null;
-			}
-			return val.Trim();
+		    return val?.Trim();
 		}
 
         /// <summary>
@@ -74,9 +68,9 @@ namespace Quartz.Util
         /// <param name="name">The name.</param>
         /// <param name="defaultValue">The default value.</param>
         /// <returns></returns>
-		public virtual string GetStringProperty(string name, string defaultValue)
+        public virtual string? GetStringProperty(string name, string? defaultValue)
 		{
-			string val = props[name] ?? defaultValue;
+			string? val = props[name] ?? defaultValue;
 			if (val == null)
 			{
 				return defaultValue;
@@ -94,7 +88,7 @@ namespace Quartz.Util
         /// </summary>
         /// <param name="name">The name.</param>
         /// <returns></returns>
-		public virtual IList<string> GetStringArrayProperty(string name)
+		public virtual IList<string>? GetStringArrayProperty(string name)
 		{
 			return GetStringArrayProperty(name, null);
 		}
@@ -105,9 +99,9 @@ namespace Quartz.Util
         /// <param name="name">The name.</param>
         /// <param name="defaultValue">The default value.</param>
         /// <returns></returns>
-		public virtual IList<string> GetStringArrayProperty(string name, string[] defaultValue)
+		public virtual IList<string>? GetStringArrayProperty(string name, string[]? defaultValue)
 		{
-            string vals = GetStringProperty(name);
+            var vals = GetStringProperty(name);
             if (vals == null)
             {
                 return defaultValue;
@@ -134,13 +128,13 @@ namespace Quartz.Util
         /// <returns></returns>
 		public virtual bool GetBooleanProperty(string name)
 		{
-			string val = GetStringProperty(name);
+			var val = GetStringProperty(name);
 			if (val == null)
 			{
 				return false;
 			}
 
-			return val.ToUpper(CultureInfo.InvariantCulture).Equals("TRUE");
+			return CultureInfo.InvariantCulture.TextInfo.ToUpper(val).Equals("TRUE");
 		}
 
         /// <summary>
@@ -151,14 +145,14 @@ namespace Quartz.Util
         /// <returns></returns>
 		public virtual bool GetBooleanProperty(string name, bool defaultValue)
 		{
-			string val = GetStringProperty(name);
+			var val = GetStringProperty(name);
 			if (val == null)
 			{
 				return defaultValue;
 			}
 
-            return val.ToUpper(CultureInfo.InvariantCulture).Equals("TRUE");
-		}
+            return CultureInfo.InvariantCulture.TextInfo.ToUpper(val).Equals("TRUE");
+        }
 
         /// <summary>
         /// Gets the byte property.
@@ -167,7 +161,7 @@ namespace Quartz.Util
         /// <returns></returns>
 		public virtual byte GetByteProperty(string name)
 		{
-			string val = GetStringProperty(name);
+			var val = GetStringProperty(name);
 			if (val == null)
 			{
 				throw new FormatException(" null string");
@@ -175,11 +169,11 @@ namespace Quartz.Util
 
 			try
 			{
-                return Byte.Parse(val, CultureInfo.InvariantCulture);
+                return byte.Parse(val, CultureInfo.InvariantCulture);
 			}
 			catch (FormatException)
 			{
-				throw new FormatException(string.Format(CultureInfo.InvariantCulture, " '{0}'", val));
+				throw new FormatException($" '{val}'");
 			}
 		}
 
@@ -191,7 +185,7 @@ namespace Quartz.Util
         /// <returns></returns>
 		public virtual byte GetByteProperty(string name, byte defaultValue)
 		{
-			string val = GetStringProperty(name);
+			var val = GetStringProperty(name);
 			if (val == null)
 			{
 			    return defaultValue;
@@ -199,11 +193,11 @@ namespace Quartz.Util
 
 			try
 			{
-                return Byte.Parse(val, CultureInfo.InvariantCulture);
+                return byte.Parse(val, CultureInfo.InvariantCulture);
 			}
 			catch (FormatException)
 			{
-				throw new FormatException(string.Format(CultureInfo.InvariantCulture, " '{0}'", val));
+				throw new FormatException($" '{val}'");
 			}
 		}
 
@@ -214,7 +208,7 @@ namespace Quartz.Util
         /// <returns></returns>
 		public virtual char GetCharProperty(string name)
 		{
-			string param = GetStringProperty(name);
+			var param = GetStringProperty(name);
 			if (param == null)
 			{
 				return '\x0000';
@@ -236,7 +230,7 @@ namespace Quartz.Util
         /// <returns></returns>
 		public virtual char GetCharProperty(string name, char defaultValue)
 		{
-			string param = GetStringProperty(name);
+			var param = GetStringProperty(name);
 			if (param == null)
 			{
 				return defaultValue;
@@ -257,7 +251,7 @@ namespace Quartz.Util
         /// <returns></returns>
 		public virtual double GetDoubleProperty(string name)
 		{
-			string val = GetStringProperty(name);
+			var val = GetStringProperty(name);
 			if (val == null)
 			{
 				throw new FormatException(" null string");
@@ -265,11 +259,11 @@ namespace Quartz.Util
 
 			try
 			{
-                return Double.Parse(val, CultureInfo.InvariantCulture);
+                return double.Parse(val, CultureInfo.InvariantCulture);
 			}
 			catch (FormatException)
 			{
-				throw new FormatException(string.Format(CultureInfo.InvariantCulture, " '{0}'", val));
+				throw new FormatException($" '{val}'");
 			}
 		}
 
@@ -281,7 +275,7 @@ namespace Quartz.Util
         /// <returns></returns>
 		public virtual double GetDoubleProperty(string name, double defaultValue)
 		{
-			string val = GetStringProperty(name);
+			var val = GetStringProperty(name);
 			if (val == null)
 			{
 				return defaultValue;
@@ -289,11 +283,11 @@ namespace Quartz.Util
 
 			try
 			{
-                return Double.Parse(val, CultureInfo.InvariantCulture);
+                return double.Parse(val, CultureInfo.InvariantCulture);
 			}
 			catch (FormatException)
 			{
-				throw new FormatException(string.Format(CultureInfo.InvariantCulture, " '{0}'", val));
+				throw new FormatException($" '{val}'");
 			}
 		}
 
@@ -304,7 +298,7 @@ namespace Quartz.Util
         /// <returns></returns>
 		public virtual float GetFloatProperty(string name)
 		{
-			string val = GetStringProperty(name);
+			var val = GetStringProperty(name);
 			if (val == null)
 			{
 				throw new FormatException(" null string");
@@ -312,11 +306,11 @@ namespace Quartz.Util
 
 			try
 			{
-                return Single.Parse(val, CultureInfo.InvariantCulture);
+                return float.Parse(val, CultureInfo.InvariantCulture);
 			}
 			catch (FormatException)
 			{
-				throw new FormatException(string.Format(CultureInfo.InvariantCulture, " '{0}'", val));
+				throw new FormatException($" '{val}'");
 			}
 		}
 
@@ -328,7 +322,7 @@ namespace Quartz.Util
         /// <returns></returns>
 		public virtual float GetFloatProperty(string name, float defaultValue)
 		{
-			string val = GetStringProperty(name);
+			var val = GetStringProperty(name);
 			if (val == null)
 			{
 				return defaultValue;
@@ -336,11 +330,11 @@ namespace Quartz.Util
 
 			try
 			{
-                return Single.Parse(val, CultureInfo.InvariantCulture);
+                return float.Parse(val, CultureInfo.InvariantCulture);
 			}
 			catch (FormatException)
 			{
-				throw new FormatException(string.Format(CultureInfo.InvariantCulture, " '{0}'", val));
+				throw new FormatException($" '{val}'");
 			}
 		}
 
@@ -351,7 +345,7 @@ namespace Quartz.Util
         /// <returns></returns>
 		public virtual int GetIntProperty(string name)
 		{
-			string val = GetStringProperty(name);
+			var val = GetStringProperty(name);
 			if (val == null)
 			{
 				throw new FormatException(" null string");
@@ -359,11 +353,11 @@ namespace Quartz.Util
 
 			try
 			{
-                return Int32.Parse(val, CultureInfo.InvariantCulture);
+                return int.Parse(val, CultureInfo.InvariantCulture);
 			}
 			catch (FormatException)
 			{
-				throw new FormatException(string.Format(CultureInfo.InvariantCulture, " '{0}'", val));
+				throw new FormatException($" '{val}'");
 			}
 		}
 
@@ -375,7 +369,7 @@ namespace Quartz.Util
         /// <returns></returns>
 		public virtual int GetIntProperty(string name, int defaultValue)
 		{
-			string val = GetStringProperty(name);
+			var val = GetStringProperty(name);
 			if (val == null)
 			{
 				return defaultValue;
@@ -383,11 +377,11 @@ namespace Quartz.Util
 
 			try
 			{
-                return Int32.Parse(val, CultureInfo.InvariantCulture);
+                return int.Parse(val, CultureInfo.InvariantCulture);
 			}
 			catch (FormatException)
 			{
-				throw new FormatException(string.Format(CultureInfo.InvariantCulture, " '{0}'", val));
+				throw new FormatException($" '{val}'");
 			}
 		}
 
@@ -396,7 +390,7 @@ namespace Quartz.Util
         /// </summary>
         /// <param name="name">The name.</param>
         /// <returns></returns>
-        public virtual IList<int> GetIntArrayProperty(string name)
+        public virtual IList<int>? GetIntArrayProperty(string name)
 		{
 			return GetIntArrayProperty(name, null);
 		}
@@ -407,9 +401,9 @@ namespace Quartz.Util
 	    /// <param name="name">The name.</param>
 	    /// <param name="defaultValue">The default value.</param>
 	    /// <returns></returns>
-        public virtual IList<int> GetIntArrayProperty(string name, IList<int> defaultValue)
+        public virtual IList<int>? GetIntArrayProperty(string name, IList<int>? defaultValue)
 		{
-			string vals = GetStringProperty(name);
+			var vals = GetStringProperty(name);
 			if (vals == null)
 			{
 				return defaultValue;
@@ -425,11 +419,11 @@ namespace Quartz.Util
 					{
 						try
 						{
-                            ints.Add(Int32.Parse(s, CultureInfo.InvariantCulture));
+                            ints.Add(int.Parse(s, CultureInfo.InvariantCulture));
 						}
 						catch (FormatException)
 						{
-							throw new FormatException(string.Format(CultureInfo.InvariantCulture, " '{0}'", vals));
+							throw new FormatException($" '{vals}'");
 						}
 					}
 					return ints;
@@ -450,7 +444,7 @@ namespace Quartz.Util
         /// <returns></returns>
 		public virtual long GetLongProperty(string name)
 		{
-			string val = GetStringProperty(name);
+			var val = GetStringProperty(name);
 			if (val == null)
 			{
 				throw new FormatException(" null string");
@@ -458,11 +452,11 @@ namespace Quartz.Util
 
 			try
 			{
-                return Int64.Parse(val, CultureInfo.InvariantCulture);
+                return long.Parse(val, CultureInfo.InvariantCulture);
 			}
 			catch (FormatException)
 			{
-				throw new FormatException(string.Format(CultureInfo.InvariantCulture, " '{0}'", val));
+				throw new FormatException($" '{val}'");
 			}
 		}
 
@@ -474,7 +468,7 @@ namespace Quartz.Util
         /// <returns></returns>
 		public virtual long GetLongProperty(string name, long def)
 		{
-			string val = GetStringProperty(name);
+			var val = GetStringProperty(name);
 			if (val == null)
 			{
 				return def;
@@ -482,11 +476,11 @@ namespace Quartz.Util
 
 			try
 			{
-                return Int64.Parse(val, CultureInfo.InvariantCulture);
+                return long.Parse(val, CultureInfo.InvariantCulture);
 			}
 			catch (FormatException)
 			{
-				throw new FormatException(string.Format(CultureInfo.InvariantCulture, " '{0}'", val));
+				throw new FormatException($" '{val}'");
 			}
 		}
 
@@ -498,7 +492,7 @@ namespace Quartz.Util
         /// <returns></returns>
         public virtual TimeSpan GetTimeSpanProperty(string name, TimeSpan def)
         {
-            string val = GetStringProperty(name);
+            var val = GetStringProperty(name);
             if (val == null)
             {
                 return def;
@@ -506,11 +500,11 @@ namespace Quartz.Util
 
             try
             {
-                return TimeSpan.FromMilliseconds(Int64.Parse(val, CultureInfo.InvariantCulture));
+                return TimeSpan.FromMilliseconds(long.Parse(val, CultureInfo.InvariantCulture));
             }
             catch (FormatException)
             {
-                throw new FormatException(string.Format(CultureInfo.InvariantCulture, " '{0}'", val));
+                throw new FormatException($" '{val}'");
             }
         }
 
@@ -521,7 +515,7 @@ namespace Quartz.Util
         /// <returns></returns>
 		public virtual short GetShortProperty(string name)
 		{
-			string val = GetStringProperty(name);
+			var val = GetStringProperty(name);
 			if (val == null)
 			{
 				throw new FormatException(" null string");
@@ -529,11 +523,11 @@ namespace Quartz.Util
 
 			try
 			{
-                return Int16.Parse(val, CultureInfo.InvariantCulture);
+                return short.Parse(val, CultureInfo.InvariantCulture);
 			}
 			catch (FormatException)
 			{
-				throw new FormatException(string.Format(CultureInfo.InvariantCulture, " '{0}'", val));
+				throw new FormatException($" '{val}'");
 			}
 		}
 
@@ -545,7 +539,7 @@ namespace Quartz.Util
         /// <returns></returns>
 		public virtual short GetShortProperty(string name, short defaultValue)
 		{
-			string val = GetStringProperty(name);
+			var val = GetStringProperty(name);
 			if (val == null)
 			{
 				return defaultValue;
@@ -553,11 +547,11 @@ namespace Quartz.Util
 
 			try
 			{
-                return Int16.Parse(val, CultureInfo.InvariantCulture);
+                return short.Parse(val, CultureInfo.InvariantCulture);
 			}
 			catch (FormatException)
 			{
-				throw new FormatException(string.Format(CultureInfo.InvariantCulture, " '{0}'", val));
+				throw new FormatException($" '{val}'");
 			}
 		}
 
@@ -566,20 +560,20 @@ namespace Quartz.Util
         /// </summary>
         /// <param name="prefix">The prefix.</param>
         /// <returns></returns>
-        public virtual IList<string> GetPropertyGroups(string prefix)
+        public virtual IReadOnlyList<string> GetPropertyGroups(string prefix)
 		{
-            var groups = new Collection.HashSet<string>();
+            var groups = new HashSet<string>();
 
 			if (!prefix.EndsWith("."))
 			{
 				prefix += ".";
 			}
 
-			foreach (string key in props.Keys)
+			foreach (string? key in props.Keys)
 			{
-				if (key.StartsWith(prefix))
+				if (key != null && key.StartsWith(prefix))
 				{
-					string groupName = key.Substring(prefix.Length, (key.IndexOf('.', prefix.Length)) - (prefix.Length));
+					string groupName = key.Substring(prefix.Length, key.IndexOf('.', prefix.Length) - prefix.Length);
 					groups.Add(groupName);
 				}
 			}
@@ -610,13 +604,13 @@ namespace Quartz.Util
 
 
         /// <summary>
-        /// Get all properties that start with the given prefix.  
+        /// Get all properties that start with the given prefix.
         /// </summary>
         /// <param name="prefix">The prefix for which to search.  If it does not end in a "." then one will be added to it for search purposes.</param>
         /// <param name="stripPrefix">Whether to strip off the given <paramref name="prefix" /> in the result's keys.</param>
-        /// <param name="excludedPrefixes">Optional array of fully qualified prefixes to exclude.  For example if <see paramfref="prefix" /> is "a.b.c", then <see paramref="excludedPrefixes" /> might be "a.b.c.ignore".</param>
+        /// <param name="excludedPrefixes">Optional array of fully qualified prefixes to exclude.  For example if <see paramref="prefix" /> is "a.b.c", then <see paramref="excludedPrefixes" /> might be "a.b.c.ignore".</param>
         /// <returns>Group of <see cref="NameValueCollection" /> that start with the given prefix, optionally have that prefix removed, and do not include properties that start with one of the given excluded prefixes.</returns>
-        public virtual NameValueCollection GetPropertyGroup(string prefix, bool stripPrefix, string[] excludedPrefixes)
+        public virtual NameValueCollection GetPropertyGroup(string prefix, bool stripPrefix, string[]? excludedPrefixes)
         {
             NameValueCollection group = new NameValueCollection();
 
@@ -625,14 +619,14 @@ namespace Quartz.Util
                 prefix += ".";
             }
 
-            foreach (string key in props.Keys)
+            foreach (string? key in props.Keys)
             {
-                if (key.StartsWith(prefix))
+                if (key != null && key.StartsWith(prefix))
                 {
                     bool exclude = false;
                     if (excludedPrefixes != null)
                     {
-                        for (int i = 0; (i < excludedPrefixes.Length) && (exclude == false); i++)
+                        for (int i = 0; i < excludedPrefixes.Length && exclude == false; i++)
                         {
                             exclude = key.StartsWith(excludedPrefixes[i]);
                         }
@@ -640,8 +634,7 @@ namespace Quartz.Util
 
                     if (exclude == false)
                     {
-                        string value = GetStringProperty(key, "");
-
+                        var value = GetStringProperty(key, "");
                         if (stripPrefix)
                         {
                             group[key.Substring(prefix.Length)] = value;
@@ -664,9 +657,10 @@ namespace Quartz.Util
         /// <param name="resourceName">The file name to read resources from.</param>
         /// <returns></returns>
         public static PropertiesParser ReadFromEmbeddedAssemblyResource(string resourceName)
-        {
-            return ReadFromStream(typeof(IScheduler).Assembly.GetManifestResourceStream(resourceName));
-        }
+         {
+	         var stream = typeof(IScheduler).GetTypeInfo().Assembly.GetManifestResourceStream(resourceName);
+	         return ReadFromStream(stream ?? throw new ArgumentException("cannot find resource " + resourceName));
+         }
 
         /// <summary>
         /// Reads the properties from file system.
@@ -683,14 +677,14 @@ namespace Quartz.Util
 	        NameValueCollection props = new NameValueCollection();
 	        using (StreamReader sr = new StreamReader(stream))
 	        {
-	            string line;
+	            string? line;
 	            while ((line = sr.ReadLine()) != null)
 	            {
 	                line = line.TrimStart();
 
 	                if (line.StartsWith("#"))
 	                {
-	                    // comment line 
+	                    // comment line
 	                    continue;
 	                }
 	                if (line.StartsWith("!END"))
@@ -698,7 +692,7 @@ namespace Quartz.Util
 	                    // special end condition
 	                    break;
 	                }
-	                string[] lineItems = line.Split(new char[] { '=' }, 2);
+	                string[] lineItems = line.Split(new[] { '=' }, 2);
 	                if (lineItems.Length == 2)
 	                {
 	                    props[lineItems[0].Trim()] = lineItems[1].Trim();

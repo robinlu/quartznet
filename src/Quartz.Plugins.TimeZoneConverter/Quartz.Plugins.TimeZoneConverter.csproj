@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;$(TargetFullFrameworkVersion)</TargetFrameworks>
+    <RootNamespace>Quartz</RootNamespace>
+    <Title>Quartz.NET TimeZoneConverter integration</Title>
+    <Description>Quartz.NET TimeZoneConverter integration https://github.com/mj1856/TimeZoneConverter; $(Description)</Description>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <Authors>Sean Farrow, Quartz.NET</Authors>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="TimeZoneConverter" Version="3.2.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Quartz.Plugins\Quartz.Plugins.csproj" />
+  </ItemGroup>
+</Project>

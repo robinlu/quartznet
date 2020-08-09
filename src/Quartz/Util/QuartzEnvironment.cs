@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Security;
 
-using Common.Logging;
+using Quartz.Logging;
 
 namespace Quartz.Util
 {
@@ -12,21 +12,17 @@ namespace Quartz.Util
     /// </summary>
     public static class QuartzEnvironment
     {
-        private static readonly ILog log = LogManager.GetLogger(typeof(QuartzEnvironment));
-        private static readonly bool isRunningOnMono = Type.GetType("Mono.Runtime") != null;
+        private static readonly ILog log = LogProvider.GetLogger(typeof(QuartzEnvironment));
 
         /// <summary>
         /// Return whether we are currently running under Mono runtime.
         /// </summary>
-        public static bool IsRunningOnMono
-        {
-            get { return isRunningOnMono; }
-        }
+        public static bool IsRunningOnMono { get; } = Type.GetType("Mono.Runtime") != null;
 
         /// <summary>
         /// Retrieves the value of an environment variable from the current process.
         /// </summary>
-        public static string GetEnvironmentVariable(string key)
+        public static string? GetEnvironmentVariable(string key)
         {
             try
             {
@@ -42,15 +38,15 @@ namespace Quartz.Util
         /// <summary>
         /// Retrieves all environment variable names and their values from the current process.
         /// </summary>
-        public static IDictionary<string, string> GetEnvironmentVariables()
+        public static IDictionary<string, string?> GetEnvironmentVariables()
         {
-            var retValue = new Dictionary<string, string>();
+            var retValue = new Dictionary<string, string?>();
             try
             {
                 IDictionary variables = Environment.GetEnvironmentVariables();
-                foreach (string key in variables.Keys)
+                foreach (string? key in variables.Keys)
                 {
-                    retValue[key] = variables[key] as string;
+                    retValue[key!] = variables[key!] as string;
                 }
             }
             catch (SecurityException)

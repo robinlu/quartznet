@@ -1,6 +1,6 @@
 #region License
 /* 
- * All content copyright Terracotta, Inc., unless otherwise indicated. All rights reserved. 
+ * All content copyright Marko Lahma, unless otherwise indicated. All rights reserved.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not 
  * use this file except in compliance with the License. You may obtain a copy 
@@ -54,7 +54,7 @@ namespace Quartz
     /// <author>James House</author>
     /// <author>Sharada Jambula</author>
     /// <author>Marko Lahma (.NET)</author>
-    public interface ITrigger : ICloneable, IComparable<ITrigger>
+    public interface ITrigger : IComparable<ITrigger>
     {
         TriggerKey Key { get; }
 
@@ -79,13 +79,13 @@ namespace Quartz
         /// Get or set the description given to the <see cref="ITrigger" /> instance by
         /// its creator (if any).
         /// </summary>
-        string Description { get; }
+        string? Description { get; }
 
         /// <summary>
         /// Get or set  the <see cref="ICalendar" /> with the given name with
         /// this Trigger. Use <see langword="null" /> when setting to dis-associate a Calendar.
         /// </summary>
-        string CalendarName { get; }
+        string? CalendarName { get; }
 
         /// <summary>
         /// Get or set the <see cref="JobDataMap" /> that is associated with the 
@@ -195,5 +195,6 @@ namespace Quartz
 
         bool HasMillisecondPrecision { get; }
 
+        ITrigger Clone();
     }
 }

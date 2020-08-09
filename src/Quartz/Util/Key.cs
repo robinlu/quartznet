@@ -1,20 +1,20 @@
 #region License
 
-/* 
- * All content copyright Terracotta, Inc., unless otherwise indicated. All rights reserved. 
- * 
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not 
- * use this file except in compliance with the License. You may obtain a copy 
- * of the License at 
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0 
- *   
- * Unless required by applicable law or agreed to in writing, software 
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT 
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
- * License for the specific language governing permissions and limitations 
+/*
+ * All content copyright Marko Lahma, unless otherwise indicated. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy
+ * of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
  * under the License.
- * 
+ *
  */
 
 #endregion
@@ -36,29 +36,30 @@ namespace Quartz.Util
         /// </summary>
         public const string DefaultGroup = "DEFAULT";
 
-        private readonly string name;
-        private readonly string group;
+        private string name = null!;
+        private string group = null!;
 
-        /// <summary> 
+        protected Key()
+        {
+        }
+
+        /// <summary>
+        /// Construct a new key with the given name and group.
+        /// </summary>
+        /// <param name="name">the name</param>
+        public Key(string name) : this(name, DefaultGroup)
+        {
+        }
+
+        /// <summary>
         /// Construct a new key with the given name and group.
         /// </summary>
         /// <param name="name">the name</param>
         /// <param name="group">the group</param>
         public Key(string name, string group)
         {
-            if (name == null)
-            {
-                throw new ArgumentNullException("name", "Name cannot be null.");
-            }
-            this.name = name;
-            if (group != null)
-            {
-                this.group = group;
-            }
-            else
-            {
-                this.group = DefaultGroup;
-            }
+            this.name = name ?? throw new ArgumentNullException(nameof(name), "Name cannot be null.");
+            this.group = group ?? DefaultGroup;
         }
 
         /// <summary>
@@ -68,27 +69,28 @@ namespace Quartz.Util
         /// </returns>
         public virtual string Name
         {
-            get { return name; }
+            get => name;
+            set => name = value;
         }
 
         /// <summary> <para>
         /// Get the group portion of the key.
         /// </para>
-        /// 
+        ///
         /// </summary>
         /// <returns> the group
         /// </returns>
         public virtual string Group
         {
-            get { return group; }
+            get => group;
+            set => group = value;
         }
-
 
         /// <summary> <para>
         /// Return the string representation of the key. The format will be:
         /// &lt;group&gt;.&lt;name&gt;.
         /// </para>
-        /// 
+        ///
         /// </summary>
         /// <returns> the string representation of the key
         /// </returns>
@@ -102,12 +104,12 @@ namespace Quartz.Util
         {
             const int Prime = 31;
             int result = 1;
-            result = Prime*result + ((group == null) ? 0 : group.GetHashCode());
-            result = Prime*result + ((name == null) ? 0 : name.GetHashCode());
+            result = Prime*result + (@group == null ? 0 : group.GetHashCode());
+            result = Prime*result + (name == null ? 0 : name.GetHashCode());
             return result;
         }
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (this == obj)
             {
@@ -147,8 +149,13 @@ namespace Quartz.Util
             return true;
         }
 
-        public int CompareTo(Key<T> o)
+        public int CompareTo(Key<T>? o)
         {
+            if (o is null)
+            {
+                return 1;
+            }
+            
             if (group.Equals(DefaultGroup) && !o.group.Equals(DefaultGroup))
             {
                 return -1;

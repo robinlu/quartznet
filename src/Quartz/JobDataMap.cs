@@ -1,20 +1,20 @@
 #region License
 
-/* 
- * All content copyright Terracotta, Inc., unless otherwise indicated. All rights reserved. 
- * 
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not 
- * use this file except in compliance with the License. You may obtain a copy 
- * of the License at 
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0 
- *   
- * Unless required by applicable law or agreed to in writing, software 
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT 
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
- * License for the specific language governing permissions and limitations 
+/*
+ * All content copyright Marko Lahma, unless otherwise indicated. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy
+ * of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
  * under the License.
- * 
+ *
  */
 
 #endregion
@@ -37,17 +37,22 @@ namespace Quartz
     /// is added to a scheduler. They are also re-persisted after every execution of
     /// instances that have <see cref="PersistJobDataAfterExecutionAttribute" /> present.
     /// <para>
-    /// <see cref="JobDataMap" /> instances can also be stored with a 
+    /// <see cref="JobDataMap" /> instances can also be stored with a
     /// <see cref="ITrigger" />.  This can be useful in the case where you have a Job
-    /// that is stored in the scheduler for regular/repeated use by multiple 
+    /// that is stored in the scheduler for regular/repeated use by multiple
     /// Triggers, yet with each independent triggering, you want to supply the
-    /// Job with different data inputs.  
+    /// Job with different data inputs.
     /// </para>
     /// <para>
-    /// The <see cref="IJobExecutionContext" /> passed to a Job at execution time 
+    /// The <see cref="IJobExecutionContext" /> passed to a Job at execution time
     /// also contains a convenience <see cref="JobDataMap" /> that is the result
     /// of merging the contents of the trigger's JobDataMap (if any) over the
-    /// Job's JobDataMap (if any).  
+    /// Job's JobDataMap (if any).
+    /// </para>
+    /// <para>
+    /// Update since 2.4.2 - We keep an dirty flag for this map so that whenever you modify(add/delete) any of the entries,
+    /// it will set to "true". However if you create new instance using an exising map with constructor, then
+    /// the dirty flag will NOT be set to "true" until you modify the instance.
     /// </para>
     /// </remarks>
     /// <seealso cref="IJob" />
@@ -66,23 +71,33 @@ namespace Quartz
         {
         }
 
-        /// <summary> 
+        /// <summary>
         /// Create a <see cref="JobDataMap" /> with the given data.
         /// </summary>
         public JobDataMap(IDictionary<string, object> map) : this()
         {
             PutAll(map);
+
+            // When constructing a new data map from another existing map, we should NOT mark dirty flag as true
+            // Use case: loading JobDataMap from DB
+            ClearDirtyFlag();
         }
 
-        /// <summary> 
+        /// <summary>
         /// Create a <see cref="JobDataMap" /> with the given data.
         /// </summary>
         public JobDataMap(IDictionary map) : this()
         {
+#pragma warning disable 8605
             foreach (DictionaryEntry entry in map)
+#pragma warning restore 8605
             {
-                Put((string) entry.Key, entry.Value);
+                Put((string) entry.Key, entry.Value!);
             }
+
+            // When constructing a new data map from another existing map, we should NOT mark dirty flag as true
+            // Use case: loading JobDataMap from DB
+            ClearDirtyFlag();
         }
 
         /// <summary>
@@ -101,9 +116,8 @@ namespace Quartz
         public virtual void PutAsString(string key, bool value)
         {
             string strValue = value.ToString();
-            base.Put(key, strValue);
+            Put(key, strValue);
         }
-
 
         /// <summary>
         /// Adds the given <see cref="char" /> value as a string version to the
@@ -111,8 +125,8 @@ namespace Quartz
         /// </summary>
         public virtual void PutAsString(string key, char value)
         {
-            string strValue = value.ToString(CultureInfo.InvariantCulture);
-            base.Put(key, strValue);
+            string strValue = value.ToString();
+            Put(key, strValue);
         }
 
         /// <summary>
@@ -122,9 +136,8 @@ namespace Quartz
         public virtual void PutAsString(string key, double value)
         {
             string strValue = value.ToString(CultureInfo.InvariantCulture);
-            base.Put(key, strValue);
+            Put(key, strValue);
         }
-
 
         /// <summary>
         /// Adds the given <see cref="float" /> value as a string version to the
@@ -133,9 +146,8 @@ namespace Quartz
         public virtual void PutAsString(string key, float value)
         {
             string strValue = value.ToString(CultureInfo.InvariantCulture);
-            base.Put(key, strValue);
+            Put(key, strValue);
         }
-
 
         /// <summary>
         /// Adds the given <see cref="int" /> value as a string version to the
@@ -144,9 +156,8 @@ namespace Quartz
         public virtual void PutAsString(string key, int value)
         {
             string strValue = value.ToString(CultureInfo.InvariantCulture);
-            base.Put(key, strValue);
+            Put(key, strValue);
         }
-
 
         /// <summary>
         /// Adds the given <see cref="long" /> value as a string version to the
@@ -155,7 +166,7 @@ namespace Quartz
         public virtual void PutAsString(string key, long value)
         {
             string strValue = value.ToString(CultureInfo.InvariantCulture);
-            base.Put(key, strValue);
+            Put(key, strValue);
         }
 
         /// <summary>
@@ -165,7 +176,7 @@ namespace Quartz
         public virtual void PutAsString(string key, DateTime value)
         {
             string strValue = value.ToString(CultureInfo.InvariantCulture);
-            base.Put(key, strValue);
+            Put(key, strValue);
         }
 
         /// <summary>
@@ -175,7 +186,7 @@ namespace Quartz
         public virtual void PutAsString(string key, DateTimeOffset value)
         {
             string strValue = value.ToString(CultureInfo.InvariantCulture);
-            base.Put(key, strValue);
+            Put(key, strValue);
         }
 
         /// <summary>
@@ -185,7 +196,27 @@ namespace Quartz
         public virtual void PutAsString(string key, TimeSpan value)
         {
             string strValue = value.ToString();
-            base.Put(key, strValue);
+            Put(key, strValue);
+        }
+
+        /// <summary>
+        /// Adds the given <see cref="Guid" /> value as a string version to the
+        /// <see cref="IJob" />'s data map. The hyphens are omitted from the  <see cref="Guid" />.
+        /// </summary>
+        public virtual void PutAsString(string key, Guid value)
+        {
+            string strValue = value.ToString("N");
+            Put(key, strValue);
+        }
+
+        /// <summary>
+        /// Adds the given <see cref="Guid" /> value as a string version to the
+        /// <see cref="IJob" />'s data map. The hyphens are omitted from the  <see cref="Guid" />.
+        /// </summary>
+        public virtual void PutAsString(string key, Guid? value)
+        {
+            string? strValue = value?.ToString("N");
+            Put(key, strValue!);
         }
 
         /// <summary>
@@ -194,7 +225,7 @@ namespace Quartz
         public virtual int GetIntValueFromString(string key)
         {
             object obj = Get(key);
-            return Int32.Parse((string) obj, CultureInfo.InvariantCulture);
+            return int.Parse((string) obj, CultureInfo.InvariantCulture);
         }
 
         /// <summary>
@@ -219,11 +250,11 @@ namespace Quartz
         {
             object obj = Get(key);
 
-            return ((string) obj).ToUpper(CultureInfo.InvariantCulture).Equals("TRUE");
+            return CultureInfo.InvariantCulture.TextInfo.ToUpper((string) obj).Equals("TRUE");
         }
 
         /// <summary>
-        /// Retrieve the identified <see cref="bool" /> value from the 
+        /// Retrieve the identified <see cref="bool" /> value from the
         /// <see cref="JobDataMap" />.
         /// </summary>
         public virtual bool GetBooleanValue(string key)
@@ -254,7 +285,7 @@ namespace Quartz
         public virtual double GetDoubleValueFromString(string key)
         {
             object obj = Get(key);
-            return Double.Parse((string) obj, CultureInfo.InvariantCulture);
+            return double.Parse((string) obj, CultureInfo.InvariantCulture);
         }
 
         /// <summary>
@@ -278,7 +309,7 @@ namespace Quartz
         public virtual float GetFloatValueFromString(string key)
         {
             object obj = Get(key);
-            return Single.Parse((string) obj, CultureInfo.InvariantCulture);
+            return float.Parse((string) obj, CultureInfo.InvariantCulture);
         }
 
         /// <summary>
@@ -302,7 +333,7 @@ namespace Quartz
         public virtual long GetLongValueFromString(string key)
         {
             object obj = Get(key);
-            return Int64.Parse((string) obj, CultureInfo.InvariantCulture);
+            return long.Parse((string) obj, CultureInfo.InvariantCulture);
         }
 
         /// <summary>
@@ -329,11 +360,7 @@ namespace Quartz
         public virtual TimeSpan GetTimeSpanValueFromString(string key)
         {
             object obj = Get(key);
-#if NET_40
             return TimeSpan.Parse((string) obj, CultureInfo.InvariantCulture);
-#else
-            return TimeSpan.Parse((string) obj);
-#endif
         }
 
         /// <summary>
@@ -398,6 +425,45 @@ namespace Quartz
             }
 
             return GetTimeSpan(key);
+        }
+
+        /// <summary>
+        /// Retrieve the identified <see cref="Guid" /> value from the <see cref="JobDataMap" />.
+        /// </summary>
+        public virtual Guid GetGuidValueFromString(string key)
+        {
+            object obj = Get(key);
+            return Guid.Parse((string)obj);
+        }
+
+        /// <summary>
+        /// Retrieve the identified <see cref="Guid" /> value from the <see cref="JobDataMap" />.
+        /// </summary>
+        public virtual Guid GetGuidValue(string key)
+        {
+            object obj = Get(key);
+
+            if (obj is string)
+            {
+                return GetGuidValueFromString(key);
+            }
+
+            return GetGuid(key);
+        }
+
+        /// <summary>
+        /// Retrieve the identified <see cref="Guid" /> value from the <see cref="JobDataMap" />.
+        /// </summary>
+        public virtual Guid? GetNullableGuidValue(string key)
+        {
+            object obj = Get(key);
+
+            if (obj is string)
+            {
+                return (obj == null || ((string)obj).Length == 0) ? (Guid?)null : GetGuidValueFromString(key);
+            }
+
+            return GetNullableGuid(key);
         }
     }
 }

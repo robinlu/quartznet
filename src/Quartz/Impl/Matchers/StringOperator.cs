@@ -1,20 +1,20 @@
 #region License
 
-/* 
- * All content copyright Terracotta, Inc., unless otherwise indicated. All rights reserved. 
- * 
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not 
- * use this file except in compliance with the License. You may obtain a copy 
- * of the License at 
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0 
- *   
- * Unless required by applicable law or agreed to in writing, software 
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT 
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
- * License for the specific language governing permissions and limitations 
+/*
+ * All content copyright Marko Lahma, unless otherwise indicated. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy
+ * of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
  * under the License.
- * 
+ *
  */
 
 #endregion
@@ -33,6 +33,7 @@ namespace Quartz.Impl.Matchers
         public static readonly StringOperator StartsWith = new StartsWithOperator();
         public static readonly StringOperator EndsWith = new EndsWithOperator();
         public static readonly StringOperator Contains = new ContainsOperator();
+        public static readonly StringOperator Anything = new AnythingOperator();
 
         public abstract bool Evaluate(string value, string compareTo);
 
@@ -68,12 +69,21 @@ namespace Quartz.Impl.Matchers
             }
         }
 
-        public override bool Equals(object obj)
+        [Serializable]
+        private class AnythingOperator : StringOperator
+        {
+            public override bool Evaluate(string value, string compareTo)
+            {
+                return true;
+            }
+        }
+
+        public override bool Equals(object? obj)
         {
             return Equals(obj as StringOperator);
         }
 
-        public bool Equals(StringOperator other)
+        public bool Equals(StringOperator? other)
         {
             if (other == null)
             {
@@ -81,7 +91,7 @@ namespace Quartz.Impl.Matchers
             }
 
             // just check by type, equality based on behavior
-            return GetType().Equals(other.GetType());
+            return GetType() == other.GetType();
         }
 
         public override int GetHashCode()

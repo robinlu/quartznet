@@ -1,20 +1,20 @@
 #region License
 
-/* 
- * All content copyright Terracotta, Inc., unless otherwise indicated. All rights reserved. 
- * 
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not 
- * use this file except in compliance with the License. You may obtain a copy 
- * of the License at 
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0 
- *   
- * Unless required by applicable law or agreed to in writing, software 
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT 
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
- * License for the specific language governing permissions and limitations 
+/*
+ * All content copyright Marko Lahma, unless otherwise indicated. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy
+ * of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
  * under the License.
- * 
+ *
  */
 
 #endregion
@@ -35,7 +35,7 @@ namespace Quartz.Impl.AdoJobStore
         /// Gets or sets the fire instance id.
         /// </summary>
         /// <value>The fire instance id.</value>
-        public virtual string FireInstanceId { get; set; }
+        public virtual string? FireInstanceId { get; set; }
 
         /// <summary>
         /// Gets or sets the fire timestamp.
@@ -57,25 +57,25 @@ namespace Quartz.Impl.AdoJobStore
         /// Gets or sets the job key.
         /// </summary>
         /// <value>The job key.</value>
-        public virtual JobKey JobKey { get; set; }
+        public virtual JobKey? JobKey { get; set; }
 
         /// <summary>
         /// Gets or sets the scheduler instance id.
         /// </summary>
         /// <value>The scheduler instance id.</value>
-        public virtual string SchedulerInstanceId { get; set; }
+        public virtual string? SchedulerInstanceId { get; set; }
 
         /// <summary>
         /// Gets or sets the trigger key.
         /// </summary>
         /// <value>The trigger key.</value>
-        public virtual TriggerKey TriggerKey { get; set; }
+        public virtual TriggerKey? TriggerKey { get; set; }
 
         /// <summary>
         /// Gets or sets the state of the fire instance.
         /// </summary>
         /// <value>The state of the fire instance.</value>
-        public virtual string FireInstanceState { get; set; }
+        public virtual string? FireInstanceState { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether [job requests recovery].

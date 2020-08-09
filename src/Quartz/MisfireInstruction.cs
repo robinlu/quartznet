@@ -1,7 +1,7 @@
 #region License
 
 /* 
- * All content copyright Terracotta, Inc., unless otherwise indicated. All rights reserved. 
+ * All content copyright Marko Lahma, unless otherwise indicated. All rights reserved.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not 
  * use this file except in compliance with the License. You may obtain a copy 
@@ -18,8 +18,6 @@
  */
 
 #endregion
-
-using System;
 
 namespace Quartz
 {
@@ -163,7 +161,7 @@ namespace Quartz
             /// Instructs the <see cref="IScheduler" /> that upon a mis-fire
             /// situation, the <see cref="ICronTrigger" /> wants to have it's
             /// next-fire-time updated to the next time in the schedule after the
-            /// current time (taking into account any associated <see cref="ICalendar" />,
+            /// current time (taking into account any associated <see cref="ICalendar" />),
             /// but it does not want to be fired now.
             /// </summary>
             public const int DoNothing = 2;
@@ -185,7 +183,7 @@ namespace Quartz
             /// Instructs the <see cref="IScheduler" /> that upon a mis-fire
             /// situation, the <see cref="ICalendarIntervalTrigger" /> wants to have it's
             /// next-fire-time updated to the next time in the schedule after the
-            /// current time (taking into account any associated <see cref="ICalendar" />,
+            /// current time (taking into account any associated <see cref="ICalendar" />),
             /// but it does not want to be fired now.
             /// </summary>
             public const int DoNothing = 2;
@@ -207,7 +205,7 @@ namespace Quartz
             /// Instructs the <see cref="IScheduler" /> that upon a mis-fire
             /// situation, the <see cref="DailyTimeIntervalTrigger" /> wants to have it's
             /// next-fire-time updated to the next time in the schedule after the
-            /// current time (taking into account any associated <see cref="ICalendar" />,
+            /// current time (taking into account any associated <see cref="ICalendar" />),
             /// but it does not want to be fired now.
             /// </summary>
             public const int DoNothing = 2;

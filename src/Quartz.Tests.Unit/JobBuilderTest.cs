@@ -1,3 +1,5 @@
+using System.Threading.Tasks;
+
 using NUnit.Framework;
 
 namespace Quartz.Tests.Unit
@@ -9,15 +11,17 @@ namespace Quartz.Tests.Unit
         [PersistJobDataAfterExecution]
         public class TestStatefulJob : IJob
         {
-            public void Execute(IJobExecutionContext context)
+            public Task Execute(IJobExecutionContext context)
             {
+                return Task.CompletedTask;
             }
         }
 
         public class TestJob : IJob
         {
-            public void Execute(IJobExecutionContext context)
+            public Task Execute(IJobExecutionContext context)
             {
+                return Task.CompletedTask;
             }
         }
 
@@ -25,8 +29,9 @@ namespace Quartz.Tests.Unit
         [PersistJobDataAfterExecution]
         public class TestAnnotatedJob : IJob
         {
-            public void Execute(IJobExecutionContext context)
+            public Task Execute(IJobExecutionContext context)
             {
+                return Task.CompletedTask;
             }
         }
 
@@ -50,10 +55,10 @@ namespace Quartz.Tests.Unit
             Assert.IsTrue(job.Description == null, "Unexpected job description: " + job.Description);
             Assert.IsTrue(job.Durable, "Expected isDurable == true ");
             Assert.IsFalse(job.RequestsRecovery, "Expected requestsRecovery == false ");
-            Assert.IsFalse(job.ConcurrentExecutionDisallowed, "Expected isConcurrentExectionDisallowed == false ");
+            Assert.IsFalse(job.ConcurrentExecutionDisallowed, "Expected isConcurrentExecutionDisallowed == false ");
             Assert.IsFalse(job.PersistJobDataAfterExecution, "Expected isPersistJobDataAfterExecution == false ");
-            Assert.IsTrue(job.JobType.Equals(typeof(TestJob)), "Unexpected job class: " + job.JobType)
-            ;
+            Assert.IsTrue(job.JobType.Equals(typeof (TestJob)), "Unexpected job class: " + job.JobType)
+                ;
 
             job = JobBuilder.Create()
                 .OfType<TestAnnotatedJob>()
@@ -66,20 +71,20 @@ namespace Quartz.Tests.Unit
             Assert.IsTrue(job.Description.Equals("my description"), "Unexpected job description: " + job.Description);
             Assert.IsTrue(job.Durable, "Expected isDurable == true ");
             Assert.IsTrue(job.RequestsRecovery, "Expected requestsRecovery == true ");
-            Assert.IsTrue(job.ConcurrentExecutionDisallowed, "Expected isConcurrentExectionDisallowed == true ");
+            Assert.IsTrue(job.ConcurrentExecutionDisallowed, "Expected isConcurrentExecutionDisallowed == true ");
             Assert.IsTrue(job.PersistJobDataAfterExecution, "Expected isPersistJobDataAfterExecution == true ");
 
             job = JobBuilder.Create()
                 .OfType<TestStatefulJob>()
-                    .
-            WithIdentity("j1", "g1")
+                .
+                WithIdentity("j1", "g1")
                 .RequestRecovery(false)
                 .Build();
 
             Assert.IsTrue(job.Key.Group.Equals("g1"), "Unexpected job group: " + job.Key.Name);
             Assert.IsFalse(job.Durable, "Expected isDurable == false ");
             Assert.IsFalse(job.RequestsRecovery, "Expected requestsRecovery == false ");
-            Assert.IsTrue(job.ConcurrentExecutionDisallowed, "Expected isConcurrentExectionDisallowed == true ");
+            Assert.IsTrue(job.ConcurrentExecutionDisallowed, "Expected isConcurrentExecutionDisallowed == true ");
             Assert.IsTrue(job.PersistJobDataAfterExecution, "Expected isPersistJobDataAfterExecution == true ");
         }
     }

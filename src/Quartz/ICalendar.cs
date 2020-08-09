@@ -1,6 +1,6 @@
 #region License
 /* 
- * All content copyright Terracotta, Inc., unless otherwise indicated. All rights reserved. 
+ * All content copyright Marko Lahma, unless otherwise indicated. All rights reserved.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not 
  * use this file except in compliance with the License. You may obtain a copy 
@@ -44,20 +44,20 @@ namespace Quartz
     /// <author>James House</author>
     /// <author>Juergen Donnerstag</author>
     /// <author>Marko Lahma (.NET)</author>
-    public interface ICalendar : ICloneable
-	{
-		/// <summary> 
-		/// Gets or sets a description for the <see cref="ICalendar" /> instance - may be
-		/// useful for remembering/displaying the purpose of the calendar, though
-		/// the description has no meaning to Quartz.
-		/// </summary>
-		string Description { get; set; }
+    public interface ICalendar
+    {
+        /// <summary> 
+        /// Gets or sets a description for the <see cref="ICalendar" /> instance - may be
+        /// useful for remembering/displaying the purpose of the calendar, though
+        /// the description has no meaning to Quartz.
+        /// </summary>
+        string? Description { get; set; }
 
 		/// <summary>
 		/// Set a new base calendar or remove the existing one.
 		/// Get the base calendar.
 		/// </summary>
-		ICalendar CalendarBase { set; get; }
+		ICalendar? CalendarBase { set; get; }
 
 		/// <summary>
 		/// Determine whether the given UTC time  is 'included' by the
@@ -70,5 +70,7 @@ namespace Quartz
 		/// Calendar after the given UTC time.
 		/// </summary>
         DateTimeOffset GetNextIncludedTimeUtc(DateTimeOffset timeUtc);
-	}
+
+        ICalendar Clone();
+    }
 }

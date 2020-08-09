@@ -1,20 +1,22 @@
 #region License
-/* 
- * All content copyright Terracotta, Inc., unless otherwise indicated. All rights reserved. 
- * 
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not 
- * use this file except in compliance with the License. You may obtain a copy 
- * of the License at 
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0 
- *   
- * Unless required by applicable law or agreed to in writing, software 
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT 
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
- * License for the specific language governing permissions and limitations 
+
+/*
+ * All content copyright Marko Lahma, unless otherwise indicated. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy
+ * of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
  * under the License.
- * 
+ *
  */
+
 #endregion
 
 using System;
@@ -23,6 +25,7 @@ using NUnit.Framework;
 
 using Quartz.Impl.Triggers;
 using Quartz.Spi;
+using Quartz.Util;
 
 namespace Quartz.Tests.Unit
 {
@@ -37,6 +40,7 @@ namespace Quartz.Tests.Unit
         /// Tests the cron trigger time zone should change when changed.
         /// </summary>
         [Test]
+        [Category("windowstimezoneid")]
         public void TestCronTriggerTimeZone_TimeZoneShouldChangeWhenChanged()
         {
             string tzStr = "FLE Standard Time";
@@ -44,7 +48,7 @@ namespace Quartz.Tests.Unit
             {
                 tzStr = "GMT Standard Time";
             }
-            TimeZoneInfo tz = TimeZoneInfo.FindSystemTimeZoneById(tzStr);
+            TimeZoneInfo tz = TimeZoneUtil.FindTimeZoneById(tzStr);
             CronTriggerImpl trigger = new CronTriggerImpl();
             trigger.Name = "Quartz-579";
             trigger.Group = SchedulerConstants.DefaultGroup;
@@ -75,15 +79,14 @@ namespace Quartz.Tests.Unit
             Assert.AreEqual(0, trigger.StartTimeUtc.Millisecond);
         }
 
-
         [Test]
         public void TestClone()
         {
             CronTriggerImpl trigger = new CronTriggerImpl();
-            trigger.Name =("test");
-            trigger.Group = ("testGroup");
-            trigger.CronExpressionString = ("0 0 12 * * ?");
-            ICronTrigger trigger2 = (ICronTrigger)trigger.Clone();
+            trigger.Name = "test";
+            trigger.Group = "testGroup";
+            trigger.CronExpressionString = "0 0 12 * * ?";
+            ICronTrigger trigger2 = (ICronTrigger) trigger.Clone();
 
             Assert.AreEqual(trigger, trigger2, "Cloning failed");
 
@@ -96,9 +99,9 @@ namespace Quartz.Tests.Unit
         public void TestQuartz558()
         {
             CronTriggerImpl trigger = new CronTriggerImpl();
-            trigger.Name =("test");
-            trigger.Group = ("testGroup");
-            ICronTrigger trigger2 = (ICronTrigger)trigger.Clone();
+            trigger.Name = "test";
+            trigger.Group = "testGroup";
+            ICronTrigger trigger2 = (ICronTrigger) trigger.Clone();
 
             Assert.AreEqual(trigger, trigger2, "Cloning failed");
         }
@@ -152,6 +155,21 @@ namespace Quartz.Tests.Unit
             Assert.That(trigger.StartTimeUtc, Is.EqualTo(trigger2.StartTimeUtc));
             Assert.That(trigger.EndTimeUtc, Is.EqualTo(trigger2.EndTimeUtc));
             Assert.That(trigger.Priority, Is.EqualTo(trigger2.Priority));
+        }
+
+        [Test]
+        public void ShouldGetScheduleBuilderWithSameSettingsAsTrigger()
+        {
+            var startTime = DateTimeOffset.UtcNow;
+            var endTime = DateTimeOffset.UtcNow.AddDays(1);
+            var trigger = new CronTriggerImpl("name", "group", "jobname", "jobgroup", startTime, endTime, "0 0 12 * * ?", TimeZoneInfo.Utc);
+            trigger.MisfireInstruction = MisfireInstruction.CronTrigger.FireOnceNow;
+            var scheduleBuilder = trigger.GetScheduleBuilder();
+
+            var cloned = (CronTriggerImpl) scheduleBuilder.Build();
+            Assert.That(cloned.MisfireInstruction, Is.EqualTo(trigger.MisfireInstruction));
+            Assert.That(cloned.TimeZone, Is.EqualTo(trigger.TimeZone));
+            Assert.That(cloned.CronExpressionString, Is.EqualTo(trigger.CronExpressionString));
         }
     }
 }

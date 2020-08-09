@@ -1,6 +1,6 @@
 #region License
 /* 
- * All content copyright Terracotta, Inc., unless otherwise indicated. All rights reserved. 
+ * All content copyright Marko Lahma, unless otherwise indicated. All rights reserved.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not 
  * use this file except in compliance with the License. You may obtain a copy 
@@ -37,5 +37,16 @@ namespace Quartz.Tests.Unit
             IJobExecutionContext ctx = new JobExecutionContextImpl(null, TestUtil.NewMinimalTriggerFiredBundle(), null);
             ctx.ToString();
         }
+
+		[Test]
+		public void RecoveryTriggerKeyAndGroup()
+		{
+			IJobExecutionContext ctx = new JobExecutionContextImpl(null, TestUtil.NewMinimalRecoveringTriggerFiredBundle(), null);
+			ctx.MergedJobDataMap[SchedulerConstants.FailedJobOriginalTriggerName] = "originalTriggerName";
+			ctx.MergedJobDataMap[SchedulerConstants.FailedJobOriginalTriggerGroup] = "originalTriggerGroup";
+			var recoveringTriggerKey = ctx.RecoveringTriggerKey;
+			Assert.That(recoveringTriggerKey.Name, Is.EqualTo("originalTriggerName"));
+			Assert.That(recoveringTriggerKey.Group, Is.EqualTo("originalTriggerGroup"));
+		}
     }
 }

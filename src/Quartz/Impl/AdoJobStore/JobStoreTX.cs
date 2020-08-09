@@ -1,6 +1,6 @@
 #region License
 /* 
- * All content copyright Terracotta, Inc., unless otherwise indicated. All rights reserved. 
+ * All content copyright Marko Lahma, unless otherwise indicated. All rights reserved.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not 
  * use this file except in compliance with the License. You may obtain a copy 
@@ -18,7 +18,10 @@
 #endregion
 
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 
+using Quartz.Logging;
 using Quartz.Spi;
 
 namespace Quartz.Impl.AdoJobStore
@@ -36,12 +39,14 @@ namespace Quartz.Impl.AdoJobStore
         /// Called by the QuartzScheduler before the <see cref="IJobStore"/> is
         /// used, in order to give the it a chance to Initialize.
         /// </summary>
-        /// <param name="loadHelper"></param>
-        /// <param name="signaler"></param>
-        public override void Initialize(ITypeLoadHelper loadHelper, ISchedulerSignaler signaler)
+        public override Task Initialize(
+            ITypeLoadHelper loadHelper, 
+            ISchedulerSignaler signaler,
+            CancellationToken cancellationToken = default)
         {
-            base.Initialize(loadHelper, signaler);
+            base.Initialize(loadHelper, signaler, cancellationToken);
             Log.Info("JobStoreTX initialized.");
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -55,25 +60,28 @@ namespace Quartz.Impl.AdoJobStore
         }
 
         /// <summary>
-        /// Execute the given callback having optionally aquired the given lock.
+        /// Execute the given callback having optionally acquired the given lock.
         /// For <see cref="JobStoreTX" />, because it manages its own transactions
         /// and only has the one datasource, this is the same behavior as 
-        /// <see cref="JobStoreSupport.ExecuteInNonManagedTXLock(string,System.Action{Quartz.Impl.AdoJobStore.ConnectionAndTransactionHolder})" />.
+        /// <see cref="JobStoreSupport.ExecuteInNonManagedTXLock" />.
         /// </summary>
         /// <param name="lockName">
-        /// The name of the lock to aquire, for example "TRIGGER_ACCESS". 
-        /// If null, then no lock is aquired, but the lockCallback is still
+        /// The name of the lock to acquire, for example "TRIGGER_ACCESS". 
+        /// If null, then no lock is acquired, but the lockCallback is still
         /// executed in a transaction.
         /// </param>
         /// <param name="txCallback">Callback to execute.</param>
+        /// <param name="cancellationToken">The cancellation instruction.</param>
         /// <returns></returns>
-        /// <seealso cref="JobStoreSupport.ExecuteInNonManagedTXLock(string,System.Action{Quartz.Impl.AdoJobStore.ConnectionAndTransactionHolder})" />
-        /// <sssseealso crsef="JobStoreCMT.ExecuteInLock(string, ITransactionCallback)" />
+        /// <seealso cref="JobStoreSupport.ExecuteInNonManagedTXLock" />
         /// <seealso cref="JobStoreSupport.GetNonManagedTXConnection()" />
         /// <seealso cref="JobStoreSupport.GetConnection()" />
-        protected override T ExecuteInLock<T>(string lockName, Func<ConnectionAndTransactionHolder, T> txCallback)
+        protected override Task<T> ExecuteInLock<T>(
+            string? lockName, 
+            Func<ConnectionAndTransactionHolder, Task<T>> txCallback,
+            CancellationToken cancellationToken = default)
         {
-            return ExecuteInNonManagedTXLock(lockName, txCallback);
+            return ExecuteInNonManagedTXLock(lockName, txCallback, cancellationToken);
         }
     }
 }

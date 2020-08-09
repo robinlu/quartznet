@@ -1,31 +1,35 @@
 ﻿#region License
 
-/* 
- * All content copyright Terracotta, Inc., unless otherwise indicated. All rights reserved. 
- * 
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not 
- * use this file except in compliance with the License. You may obtain a copy 
- * of the License at 
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0 
- *   
- * Unless required by applicable law or agreed to in writing, software 
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT 
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
- * License for the specific language governing permissions and limitations 
+/*
+ * All content copyright Marko Lahma, unless otherwise indicated. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy
+ * of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
  * under the License.
- * 
+ *
  */
 
 #endregion
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 using NUnit.Framework;
 
 using Quartz.Impl.Calendar;
 using Quartz.Impl.Triggers;
+using Quartz.Job;
+using Quartz.Spi;
+using Quartz.Util;
 
 namespace Quartz.Tests.Unit.Impl.Triggers
 {
@@ -44,15 +48,15 @@ namespace Quartz.Tests.Unit.Impl.Triggers
             TimeOfDay startTimeOfDay = new TimeOfDay(8, 0, 0);
             TimeOfDay endTimeOfDay = new TimeOfDay(11, 0, 0);
             var trigger = new DailyTimeIntervalTriggerImpl
-                          {
-                              StartTimeUtc = startTime.ToUniversalTime(),
-                              StartTimeOfDay = startTimeOfDay,
-                              EndTimeOfDay = endTimeOfDay,
-                              RepeatIntervalUnit = IntervalUnit.Minute,
-                              RepeatInterval = 72
-                          };
+            {
+                StartTimeUtc = startTime.ToUniversalTime(),
+                StartTimeOfDay = startTimeOfDay,
+                EndTimeOfDay = endTimeOfDay,
+                RepeatIntervalUnit = IntervalUnit.Minute,
+                RepeatInterval = 72 // this interval will give three firings per day (8:00, 9:12, and 10:24)
+            };
 
-            IList<DateTimeOffset> fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 48);
+            var fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 48);
             Assert.AreEqual(48, fireTimes.Count);
             Assert.AreEqual(DateBuilder.DateOf(8, 0, 0, 1, 1, 2011), fireTimes[0]);
             Assert.AreEqual(DateBuilder.DateOf(10, 24, 0, 16, 1, 2011), fireTimes[47]);
@@ -63,15 +67,15 @@ namespace Quartz.Tests.Unit.Impl.Triggers
         {
             DateTimeOffset startTime = DateBuilder.DateOf(0, 0, 0, 1, 1, 2011);
             var trigger = new DailyTimeIntervalTriggerImpl
-                          {
-                              StartTimeUtc = startTime.ToUniversalTime(),
-                              StartTimeOfDay = new TimeOfDay(8, 0),
-                              RepeatIntervalUnit = IntervalUnit.Minute,
-                              RepeatInterval = 60
-                          };
+            {
+                StartTimeUtc = startTime.ToUniversalTime(),
+                StartTimeOfDay = new TimeOfDay(8, 0),
+                RepeatIntervalUnit = IntervalUnit.Minute,
+                RepeatInterval = 60
+            };
 
-            CronCalendar cronCal = new CronCalendar("* * 9-12 * * ?"); // exclude 9-12		
-            IList<DateTimeOffset> fireTimes = TriggerUtils.ComputeFireTimes(trigger, cronCal, 48);
+            CronCalendar cronCal = new CronCalendar("* * 9-12 * * ?"); // exclude 9-12
+            var fireTimes = TriggerUtils.ComputeFireTimes(trigger, cronCal, 48);
             Assert.AreEqual(48, fireTimes.Count);
             Assert.AreEqual(DateBuilder.DateOf(8, 0, 0, 1, 1, 2011), fireTimes[0]);
             Assert.AreEqual(DateBuilder.DateOf(13, 0, 0, 1, 1, 2011), fireTimes[1]);
@@ -81,33 +85,25 @@ namespace Quartz.Tests.Unit.Impl.Triggers
         [Test]
         public void TestValidateTimeOfDayOrder()
         {
-            var trigger = new DailyTimeIntervalTriggerImpl
-                          {
-                              StartTimeOfDay = new TimeOfDay(12, 0, 0),
-                              EndTimeOfDay = new TimeOfDay(8, 0, 0)
-                          };
-            try
-            {
-                trigger.Validate();
-                Assert.Fail("Trigger should be invalidate when time of day is not in order.");
-            }
-            catch (SchedulerException)
-            {
-                // expected.
-            }
+            Assert.Throws<ArgumentException>(() =>
+                new DailyTimeIntervalTriggerImpl
+                {
+                    StartTimeOfDay = new TimeOfDay(12, 0, 0),
+                    EndTimeOfDay = new TimeOfDay(8, 0, 0)
+                }, "End time of day cannot be before start time of day");
         }
 
         [Test]
         public void TestValidateInterval()
         {
             var trigger = new DailyTimeIntervalTriggerImpl
-                          {
-                              Name = "test",
-                              Group = "test",
-                              JobKey = JobKey.Create("test"),
-                              RepeatIntervalUnit = IntervalUnit.Hour,
-                              RepeatInterval = 25
-                          };
+            {
+                Name = "test",
+                Group = "test",
+                JobKey = JobKey.Create("test"),
+                RepeatIntervalUnit = IntervalUnit.Hour,
+                RepeatInterval = 25
+            };
 
             Assert.Throws<SchedulerException>(trigger.Validate, "repeatInterval can not exceed 24 hours. Given 25 hours.");
 
@@ -118,9 +114,9 @@ namespace Quartz.Tests.Unit.Impl.Triggers
             trigger.RepeatIntervalUnit = IntervalUnit.Second;
             trigger.RepeatInterval = 60*60*25;
 
-            Assert.Throws<SchedulerException>(trigger.Validate, "epeatInterval can not exceed 24 hours (86400 seconds). Given 90000");
+            Assert.Throws<SchedulerException>(trigger.Validate, "repeatInterval can not exceed 24 hours (86400 seconds). Given 90000");
 
-            Assert.Throws<ArgumentException>(delegate { trigger.RepeatIntervalUnit = IntervalUnit.Day; }, "Invalid repeat IntervalUnit (must be Second, Minute or Hour");
+            Assert.Throws<ArgumentException>(delegate { trigger.RepeatIntervalUnit = IntervalUnit.Day; }, "Invalid repeat IntervalUnit (must be Second, Minute or Hour)");
 
             trigger.RepeatIntervalUnit = IntervalUnit.Second;
             trigger.RepeatInterval = 0;
@@ -132,13 +128,13 @@ namespace Quartz.Tests.Unit.Impl.Triggers
         {
             DateTimeOffset startTime = DateBuilder.DateOf(0, 0, 0, 1, 1, 2011);
             var trigger = new DailyTimeIntervalTriggerImpl
-                          {
-                              StartTimeUtc = startTime.ToUniversalTime(),
-                              RepeatIntervalUnit = IntervalUnit.Minute,
-                              RepeatInterval = 60
-                          };
+            {
+                StartTimeUtc = startTime.ToUniversalTime(),
+                RepeatIntervalUnit = IntervalUnit.Minute,
+                RepeatInterval = 60
+            };
 
-            IList<DateTimeOffset> fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 48);
+            var fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 48);
             Assert.AreEqual(48, fireTimes.Count);
             Assert.AreEqual(DateBuilder.DateOf(0, 0, 0, 1, 1, 2011), fireTimes[0]);
             Assert.AreEqual(DateBuilder.DateOf(23, 0, 0, 2, 1, 2011), fireTimes[47]);
@@ -150,14 +146,14 @@ namespace Quartz.Tests.Unit.Impl.Triggers
             DateTimeOffset startTime = DateBuilder.DateOf(0, 0, 0, 1, 1, 2011);
             DateTimeOffset endTime = DateBuilder.DateOf(22, 0, 0, 2, 1, 2011);
             var trigger = new DailyTimeIntervalTriggerImpl
-                          {
-                              StartTimeUtc = startTime.ToUniversalTime(),
-                              EndTimeUtc = endTime.ToUniversalTime(),
-                              RepeatIntervalUnit = IntervalUnit.Minute,
-                              RepeatInterval = 60
-                          };
+            {
+                StartTimeUtc = startTime.ToUniversalTime(),
+                EndTimeUtc = endTime.ToUniversalTime(),
+                RepeatIntervalUnit = IntervalUnit.Minute,
+                RepeatInterval = 60
+            };
 
-            IList<DateTimeOffset> fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 48);
+            var fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 48);
             Assert.AreEqual(47, fireTimes.Count);
             Assert.AreEqual(DateBuilder.DateOf(0, 0, 0, 1, 1, 2011), fireTimes[0]);
             Assert.AreEqual(DateBuilder.DateOf(22, 0, 0, 2, 1, 2011), fireTimes[46]);
@@ -169,17 +165,45 @@ namespace Quartz.Tests.Unit.Impl.Triggers
             DateTimeOffset startTime = DateBuilder.DateOf(0, 0, 0, 1, 1, 2011);
             TimeOfDay startTimeOfDay = new TimeOfDay(8, 0, 0);
             var trigger = new DailyTimeIntervalTriggerImpl
-                          {
-                              StartTimeUtc = startTime.ToUniversalTime(),
-                              StartTimeOfDay = startTimeOfDay,
-                              RepeatIntervalUnit = IntervalUnit.Minute,
-                              RepeatInterval = 60
-                          };
+            {
+                StartTimeUtc = startTime.ToUniversalTime(),
+                StartTimeOfDay = startTimeOfDay,
+                RepeatIntervalUnit = IntervalUnit.Minute,
+                RepeatInterval = 60
+            };
 
-            IList<DateTimeOffset> fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 48);
+            var fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 48);
             Assert.AreEqual(48, fireTimes.Count);
             Assert.AreEqual(DateBuilder.DateOf(8, 0, 0, 1, 1, 2011), fireTimes[0]);
             Assert.AreEqual(DateBuilder.DateOf(23, 0, 0, 3, 1, 2011), fireTimes[47]);
+        }
+
+        [Test]
+        public void TestStartTimeBeforeStartTimeOfDayOnInvalidDay()
+        {
+            DateTimeOffset startTime = dateOf(0, 0, 0, 1, 1, 2011); // Jan 1, 2011 was a saturday...
+            TimeOfDay startTimeOfDay = new TimeOfDay(8, 0, 0);
+            var trigger = new DailyTimeIntervalTriggerImpl();
+            var daysOfWeek = new List<DayOfWeek>
+            {
+                DayOfWeek.Monday,
+                DayOfWeek.Tuesday,
+                DayOfWeek.Wednesday,
+                DayOfWeek.Thursday,
+                DayOfWeek.Friday
+            };
+            trigger.DaysOfWeek = daysOfWeek;
+            trigger.StartTimeUtc = startTime.ToUniversalTime();
+            trigger.StartTimeOfDay = startTimeOfDay;
+            trigger.RepeatIntervalUnit = IntervalUnit.Minute;
+            trigger.RepeatInterval = 60;
+
+            Assert.That(trigger.GetFireTimeAfter(dateOf(6, 0, 0, 22, 5, 2010)), Is.EqualTo(dateOf(8, 0, 0, 3, 1, 2011)));
+
+            var fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 48);
+            Assert.That(fireTimes.Count, Is.EqualTo(48));
+            Assert.That(fireTimes[0], Is.EqualTo(dateOf(8, 0, 0, 3, 1, 2011)));
+            Assert.That(fireTimes[47], Is.EqualTo(dateOf(23, 0, 0, 5, 1, 2011)));
         }
 
         [Test]
@@ -188,14 +212,14 @@ namespace Quartz.Tests.Unit.Impl.Triggers
             DateTimeOffset startTime = DateBuilder.DateOf(9, 23, 0, 1, 1, 2011);
             TimeOfDay startTimeOfDay = new TimeOfDay(8, 0, 0);
             var trigger = new DailyTimeIntervalTriggerImpl
-                          {
-                              StartTimeUtc = startTime.ToUniversalTime(),
-                              StartTimeOfDay = startTimeOfDay,
-                              RepeatIntervalUnit = IntervalUnit.Minute,
-                              RepeatInterval = 60
-                          };
+            {
+                StartTimeUtc = startTime.ToUniversalTime(),
+                StartTimeOfDay = startTimeOfDay,
+                RepeatIntervalUnit = IntervalUnit.Minute,
+                RepeatInterval = 60
+            };
 
-            IList<DateTimeOffset> fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 48);
+            var fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 48);
             Assert.AreEqual(48, fireTimes.Count);
             Assert.AreEqual(DateBuilder.DateOf(10, 0, 0, 1, 1, 2011), fireTimes[0]);
             Assert.AreEqual(DateBuilder.DateOf(9, 0, 0, 4, 1, 2011), fireTimes[47]);
@@ -208,15 +232,15 @@ namespace Quartz.Tests.Unit.Impl.Triggers
             DateTimeOffset endTime = DateBuilder.DateOf(16, 0, 0, 2, 1, 2011);
             TimeOfDay endTimeOfDay = new TimeOfDay(17, 0, 0);
             var trigger = new DailyTimeIntervalTriggerImpl
-                          {
-                              StartTimeUtc = startTime.ToUniversalTime(),
-                              EndTimeUtc = endTime.ToUniversalTime(),
-                              EndTimeOfDay = endTimeOfDay,
-                              RepeatIntervalUnit = IntervalUnit.Minute,
-                              RepeatInterval = 60
-                          };
+            {
+                StartTimeUtc = startTime.ToUniversalTime(),
+                EndTimeUtc = endTime.ToUniversalTime(),
+                EndTimeOfDay = endTimeOfDay,
+                RepeatIntervalUnit = IntervalUnit.Minute,
+                RepeatInterval = 60
+            };
 
-            IList<DateTimeOffset> fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 48);
+            var fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 48);
             Assert.AreEqual(35, fireTimes.Count);
             Assert.AreEqual(DateBuilder.DateOf(0, 0, 0, 1, 1, 2011), fireTimes[0]);
             Assert.AreEqual(DateBuilder.DateOf(17, 0, 0, 1, 1, 2011), fireTimes[17]);
@@ -230,15 +254,15 @@ namespace Quartz.Tests.Unit.Impl.Triggers
             DateTimeOffset endTime = DateBuilder.DateOf(18, 0, 0, 2, 1, 2011);
             TimeOfDay endTimeOfDay = new TimeOfDay(17, 0, 0);
             var trigger = new DailyTimeIntervalTriggerImpl
-                          {
-                              StartTimeUtc = startTime.ToUniversalTime(),
-                              EndTimeUtc = endTime.ToUniversalTime(),
-                              EndTimeOfDay = endTimeOfDay,
-                              RepeatIntervalUnit = IntervalUnit.Minute,
-                              RepeatInterval = 60
-                          };
+            {
+                StartTimeUtc = startTime.ToUniversalTime(),
+                EndTimeUtc = endTime.ToUniversalTime(),
+                EndTimeOfDay = endTimeOfDay,
+                RepeatIntervalUnit = IntervalUnit.Minute,
+                RepeatInterval = 60
+            };
 
-            IList<DateTimeOffset> fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 48);
+            var fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 48);
             Assert.AreEqual(36, fireTimes.Count);
             Assert.AreEqual(DateBuilder.DateOf(0, 0, 0, 1, 1, 2011), fireTimes[0]);
             Assert.AreEqual(DateBuilder.DateOf(17, 0, 0, 1, 1, 2011), fireTimes[17]);
@@ -252,15 +276,15 @@ namespace Quartz.Tests.Unit.Impl.Triggers
             TimeOfDay startTimeOfDay = new TimeOfDay(8, 0, 0);
             TimeOfDay endTimeOfDay = new TimeOfDay(17, 0, 0);
             var trigger = new DailyTimeIntervalTriggerImpl
-                          {
-                              StartTimeUtc = startTime.ToUniversalTime(),
-                              StartTimeOfDay = startTimeOfDay,
-                              EndTimeOfDay = endTimeOfDay,
-                              RepeatIntervalUnit = IntervalUnit.Minute,
-                              RepeatInterval = 60
-                          };
+            {
+                StartTimeUtc = startTime.ToUniversalTime(),
+                StartTimeOfDay = startTimeOfDay,
+                EndTimeOfDay = endTimeOfDay,
+                RepeatIntervalUnit = IntervalUnit.Minute,
+                RepeatInterval = 60
+            };
 
-            IList<DateTimeOffset> fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 48);
+            var fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 48);
             Assert.AreEqual(48, fireTimes.Count);
             Assert.AreEqual(DateBuilder.DateOf(8, 0, 0, 1, 1, 2011), fireTimes[0]);
             Assert.AreEqual(DateBuilder.DateOf(17, 0, 0, 1, 1, 2011), fireTimes[9]); // The 10th hours is the end of day.
@@ -275,16 +299,16 @@ namespace Quartz.Tests.Unit.Impl.Triggers
             TimeOfDay startTimeOfDay = new TimeOfDay(8, 0, 0);
             TimeOfDay endTimeOfDay = new TimeOfDay(17, 0, 0);
             var trigger = new DailyTimeIntervalTriggerImpl
-                          {
-                              StartTimeUtc = startTime.ToUniversalTime(),
-                              EndTimeUtc = endTime.ToUniversalTime(),
-                              StartTimeOfDay = startTimeOfDay,
-                              EndTimeOfDay = endTimeOfDay,
-                              RepeatIntervalUnit = IntervalUnit.Minute,
-                              RepeatInterval = 60
-                          };
+            {
+                StartTimeUtc = startTime.ToUniversalTime(),
+                EndTimeUtc = endTime.ToUniversalTime(),
+                StartTimeOfDay = startTimeOfDay,
+                EndTimeOfDay = endTimeOfDay,
+                RepeatIntervalUnit = IntervalUnit.Minute,
+                RepeatInterval = 60
+            };
 
-            IList<DateTimeOffset> fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 48);
+            var fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 48);
             Assert.AreEqual(30, fireTimes.Count);
             Assert.AreEqual(DateBuilder.DateOf(8, 0, 0, 1, 1, 2011), fireTimes[0]);
             Assert.AreEqual(DateBuilder.DateOf(17, 0, 0, 1, 1, 2011), fireTimes[9]); // The 10th hours is the end of day.
@@ -298,15 +322,15 @@ namespace Quartz.Tests.Unit.Impl.Triggers
             TimeOfDay startTimeOfDay = new TimeOfDay(8, 23, 0);
             TimeOfDay endTimeOfDay = new TimeOfDay(23, 59, 59); // edge case when endTime is last second of day, which is default too.
             var trigger = new DailyTimeIntervalTriggerImpl
-                          {
-                              StartTimeUtc = startTime.ToUniversalTime(),
-                              StartTimeOfDay = startTimeOfDay,
-                              EndTimeOfDay = endTimeOfDay,
-                              RepeatIntervalUnit = IntervalUnit.Minute,
-                              RepeatInterval = 60
-                          };
+            {
+                StartTimeUtc = startTime.ToUniversalTime(),
+                StartTimeOfDay = startTimeOfDay,
+                EndTimeOfDay = endTimeOfDay,
+                RepeatIntervalUnit = IntervalUnit.Minute,
+                RepeatInterval = 60
+            };
 
-            IList<DateTimeOffset> fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 48);
+            var fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 48);
             Assert.AreEqual(48, fireTimes.Count);
             Assert.AreEqual(DateBuilder.DateOf(8, 23, 0, 1, 1, 2011), fireTimes[0]);
             Assert.AreEqual(DateBuilder.DateOf(23, 23, 0, 3, 1, 2011), fireTimes[47]);
@@ -315,21 +339,21 @@ namespace Quartz.Tests.Unit.Impl.Triggers
         [Test]
         public void TestAllDaysOfTheWeek()
         {
-            Collection.ISet<DayOfWeek> daysOfWeek = DailyTimeIntervalScheduleBuilder.AllDaysOfTheWeek;
+            IReadOnlyCollection<DayOfWeek> daysOfWeek = DailyTimeIntervalScheduleBuilder.AllDaysOfTheWeek;
             DateTimeOffset startTime = DateBuilder.DateOf(0, 0, 0, 1, 1, 2011); // SAT
             TimeOfDay startTimeOfDay = new TimeOfDay(8, 0, 0);
             TimeOfDay endTimeOfDay = new TimeOfDay(17, 0, 0);
             var trigger = new DailyTimeIntervalTriggerImpl
-                          {
-                              StartTimeUtc = startTime.ToUniversalTime(),
-                              StartTimeOfDay = startTimeOfDay,
-                              EndTimeOfDay = endTimeOfDay,
-                              DaysOfWeek = daysOfWeek,
-                              RepeatIntervalUnit = IntervalUnit.Minute,
-                              RepeatInterval = 60
-                          };
+            {
+                StartTimeUtc = startTime.ToUniversalTime(),
+                StartTimeOfDay = startTimeOfDay,
+                EndTimeOfDay = endTimeOfDay,
+                DaysOfWeek = daysOfWeek,
+                RepeatIntervalUnit = IntervalUnit.Minute,
+                RepeatInterval = 60
+            };
 
-            IList<DateTimeOffset> fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 48);
+            var fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 48);
             Assert.AreEqual(48, fireTimes.Count);
             Assert.AreEqual(DateBuilder.DateOf(8, 0, 0, 1, 1, 2011), fireTimes[0]);
             Assert.AreEqual(DateBuilder.DateOf(17, 0, 0, 1, 1, 2011), fireTimes[9]); // The 10th hours is the end of day.
@@ -339,21 +363,21 @@ namespace Quartz.Tests.Unit.Impl.Triggers
         [Test]
         public void TestMonThroughFri()
         {
-            Collection.ISet<DayOfWeek> daysOfWeek = DailyTimeIntervalScheduleBuilder.MondayThroughFriday;
+            IReadOnlyCollection<DayOfWeek> daysOfWeek = DailyTimeIntervalScheduleBuilder.MondayThroughFriday;
             DateTimeOffset startTime = DateBuilder.DateOf(0, 0, 0, 1, 1, 2011); // SAT(7)
             TimeOfDay startTimeOfDay = new TimeOfDay(8, 0, 0);
             TimeOfDay endTimeOfDay = new TimeOfDay(17, 0, 0);
             var trigger = new DailyTimeIntervalTriggerImpl
-                          {
-                              StartTimeUtc = startTime.ToUniversalTime(),
-                              StartTimeOfDay = startTimeOfDay,
-                              EndTimeOfDay = endTimeOfDay,
-                              DaysOfWeek = daysOfWeek,
-                              RepeatIntervalUnit = IntervalUnit.Minute,
-                              RepeatInterval = 60
-                          };
+            {
+                StartTimeUtc = startTime.ToUniversalTime(),
+                StartTimeOfDay = startTimeOfDay,
+                EndTimeOfDay = endTimeOfDay,
+                DaysOfWeek = daysOfWeek,
+                RepeatIntervalUnit = IntervalUnit.Minute,
+                RepeatInterval = 60
+            };
 
-            IList<DateTimeOffset> fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 48);
+            var fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 48);
             Assert.AreEqual(48, fireTimes.Count);
             Assert.AreEqual(DateBuilder.DateOf(8, 0, 0, 3, 1, 2011), fireTimes[0]);
             Assert.AreEqual(DayOfWeek.Monday, fireTimes[0].DayOfWeek);
@@ -366,21 +390,21 @@ namespace Quartz.Tests.Unit.Impl.Triggers
         [Test]
         public void TestSatAndSun()
         {
-            Collection.ISet<DayOfWeek> daysOfWeek = DailyTimeIntervalScheduleBuilder.SaturdayAndSunday;
+            IReadOnlyCollection<DayOfWeek> daysOfWeek = DailyTimeIntervalScheduleBuilder.SaturdayAndSunday;
             DateTimeOffset startTime = DateBuilder.DateOf(0, 0, 0, 1, 1, 2011); // SAT(7)
             TimeOfDay startTimeOfDay = new TimeOfDay(8, 0, 0);
             TimeOfDay endTimeOfDay = new TimeOfDay(17, 0, 0);
             var trigger = new DailyTimeIntervalTriggerImpl
-                          {
-                              StartTimeUtc = startTime.ToUniversalTime(),
-                              StartTimeOfDay = startTimeOfDay,
-                              EndTimeOfDay = endTimeOfDay,
-                              DaysOfWeek = daysOfWeek,
-                              RepeatIntervalUnit = IntervalUnit.Minute,
-                              RepeatInterval = 60
-                          };
+            {
+                StartTimeUtc = startTime.ToUniversalTime(),
+                StartTimeOfDay = startTimeOfDay,
+                EndTimeOfDay = endTimeOfDay,
+                DaysOfWeek = daysOfWeek,
+                RepeatIntervalUnit = IntervalUnit.Minute,
+                RepeatInterval = 60
+            };
 
-            IList<DateTimeOffset> fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 48);
+            var fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 48);
             Assert.AreEqual(48, fireTimes.Count);
             Assert.AreEqual(DateBuilder.DateOf(8, 0, 0, 1, 1, 2011), fireTimes[0]);
             Assert.AreEqual(DayOfWeek.Saturday, fireTimes[0].DayOfWeek);
@@ -393,22 +417,24 @@ namespace Quartz.Tests.Unit.Impl.Triggers
         [Test]
         public void TestMonOnly()
         {
-            Collection.ISet<DayOfWeek> daysOfWeek = new Collection.HashSet<DayOfWeek>();
-            daysOfWeek.Add(DayOfWeek.Monday);
+            var daysOfWeek = new HashSet<DayOfWeek>
+            {
+                DayOfWeek.Monday
+            };
             DateTimeOffset startTime = DateBuilder.DateOf(0, 0, 0, 1, 1, 2011); // SAT(7)
             TimeOfDay startTimeOfDay = new TimeOfDay(8, 0, 0);
             TimeOfDay endTimeOfDay = new TimeOfDay(17, 0, 0);
             var trigger = new DailyTimeIntervalTriggerImpl
-                          {
-                              StartTimeUtc = startTime.ToUniversalTime(),
-                              StartTimeOfDay = startTimeOfDay,
-                              EndTimeOfDay = endTimeOfDay,
-                              DaysOfWeek = daysOfWeek,
-                              RepeatIntervalUnit = IntervalUnit.Minute,
-                              RepeatInterval = 60
-                          };
+            {
+                StartTimeUtc = startTime.ToUniversalTime(),
+                StartTimeOfDay = startTimeOfDay,
+                EndTimeOfDay = endTimeOfDay,
+                DaysOfWeek = daysOfWeek,
+                RepeatIntervalUnit = IntervalUnit.Minute,
+                RepeatInterval = 60
+            };
 
-            IList<DateTimeOffset> fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 48);
+            var fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 48);
             Assert.AreEqual(48, fireTimes.Count);
             Assert.AreEqual(DateBuilder.DateOf(8, 0, 0, 3, 1, 2011), fireTimes[0]);
             Assert.AreEqual(DayOfWeek.Monday, fireTimes[0].DayOfWeek);
@@ -426,16 +452,16 @@ namespace Quartz.Tests.Unit.Impl.Triggers
             TimeOfDay startTimeOfDay = new TimeOfDay(8, 0, 0);
             TimeOfDay endTimeOfDay = new TimeOfDay(10, 0, 0);
             var trigger = new DailyTimeIntervalTriggerImpl
-                          {
-                              StartTimeUtc = startTime.ToUniversalTime(),
-                              EndTimeUtc = endTime.ToUniversalTime(),
-                              StartTimeOfDay = startTimeOfDay,
-                              EndTimeOfDay = endTimeOfDay,
-                              RepeatIntervalUnit = IntervalUnit.Minute,
-                              RepeatInterval = 23
-                          };
+            {
+                StartTimeUtc = startTime.ToUniversalTime(),
+                EndTimeUtc = endTime.ToUniversalTime(),
+                StartTimeOfDay = startTimeOfDay,
+                EndTimeOfDay = endTimeOfDay,
+                RepeatIntervalUnit = IntervalUnit.Minute,
+                RepeatInterval = 23
+            };
 
-            IList<DateTimeOffset> fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 48);
+            var fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 48);
             Assert.AreEqual(18, fireTimes.Count);
             Assert.AreEqual(DateBuilder.DateOf(8, 0, 0, 1, 1, 2011), fireTimes[0]);
             Assert.AreEqual(DateBuilder.DateOf(9, 55, 0, 1, 1, 2011), fireTimes[5]);
@@ -450,16 +476,16 @@ namespace Quartz.Tests.Unit.Impl.Triggers
             TimeOfDay startTimeOfDay = new TimeOfDay(8, 1, 15);
             TimeOfDay endTimeOfDay = new TimeOfDay(16, 1, 15);
             var trigger = new DailyTimeIntervalTriggerImpl
-                          {
-                              StartTimeUtc = startTime.ToUniversalTime(),
-                              StartTimeOfDay = startTimeOfDay,
-                              EndTimeUtc = endTime.ToUniversalTime(),
-                              EndTimeOfDay = endTimeOfDay,
-                              RepeatIntervalUnit = IntervalUnit.Hour,
-                              RepeatInterval = 2
-                          };
+            {
+                StartTimeUtc = startTime.ToUniversalTime(),
+                StartTimeOfDay = startTimeOfDay,
+                EndTimeUtc = endTime.ToUniversalTime(),
+                EndTimeOfDay = endTimeOfDay,
+                RepeatIntervalUnit = IntervalUnit.Hour,
+                RepeatInterval = 2
+            };
 
-            IList<DateTimeOffset> fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 48);
+            var fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 48);
             Assert.AreEqual(48, fireTimes.Count);
             Assert.AreEqual(DateBuilder.DateOf(8, 1, 15, 1, 1, 2011), fireTimes[0]);
             Assert.AreEqual(DateBuilder.DateOf(12, 1, 15, 10, 1, 2011), fireTimes[47]);
@@ -472,18 +498,18 @@ namespace Quartz.Tests.Unit.Impl.Triggers
             TimeOfDay startTimeOfDay = new TimeOfDay(8, 0, 2);
             TimeOfDay endTimeOfDay = new TimeOfDay(13, 30, 0);
             var trigger = new DailyTimeIntervalTriggerImpl
-                          {
-                              StartTimeUtc = startTime.ToUniversalTime(),
-                              StartTimeOfDay = startTimeOfDay,
-                              EndTimeOfDay = endTimeOfDay,
-                              RepeatIntervalUnit = IntervalUnit.Second,
-                              RepeatInterval = 72
-                          };
+            {
+                StartTimeUtc = startTime.ToUniversalTime(),
+                StartTimeOfDay = startTimeOfDay,
+                EndTimeOfDay = endTimeOfDay,
+                RepeatIntervalUnit = IntervalUnit.Second,
+                RepeatInterval = 72
+            };
 
-            IList<DateTimeOffset> fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 48);
+            var fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 48);
             Assert.AreEqual(48, fireTimes.Count);
-            Assert.AreEqual((DateBuilder.DateOf(8, 0, 2, 1, 1, 2011)), fireTimes[0]);
-            Assert.AreEqual((DateBuilder.DateOf(8, 56, 26, 1, 1, 2011)), fireTimes[47]);
+            Assert.AreEqual(DateBuilder.DateOf(8, 0, 2, 1, 1, 2011), fireTimes[0]);
+            Assert.AreEqual(DateBuilder.DateOf(8, 56, 26, 1, 1, 2011), fireTimes[47]);
         }
 
         [Test]
@@ -493,18 +519,18 @@ namespace Quartz.Tests.Unit.Impl.Triggers
             TimeOfDay startTimeOfDay = new TimeOfDay(8, 0, 0);
             TimeOfDay endTimeOfDay = new TimeOfDay(11, 0, 0);
             var trigger = new DailyTimeIntervalTriggerImpl
-                          {
-                              StartTimeUtc = startTime.ToUniversalTime(),
-                              StartTimeOfDay = startTimeOfDay,
-                              EndTimeOfDay = endTimeOfDay,
-                              RepeatIntervalUnit = IntervalUnit.Minute,
-                              RepeatInterval = (72),
-                              RepeatCount = DailyTimeIntervalTriggerImpl.RepeatIndefinitely
-                          };
+            {
+                StartTimeUtc = startTime.ToUniversalTime(),
+                StartTimeOfDay = startTimeOfDay,
+                EndTimeOfDay = endTimeOfDay,
+                RepeatIntervalUnit = IntervalUnit.Minute,
+                RepeatInterval = 72,
+                RepeatCount = DailyTimeIntervalTriggerImpl.RepeatIndefinitely
+            };
 
             // Setting this (which is default) should make the trigger just as normal one.
 
-            IList<DateTimeOffset> fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 48);
+            var fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 48);
             Assert.AreEqual(48, fireTimes.Count);
             Assert.AreEqual(DateBuilder.DateOf(8, 0, 0, 1, 1, 2011), fireTimes[0]);
             Assert.AreEqual(DateBuilder.DateOf(10, 24, 0, 16, 1, 2011), fireTimes[47]);
@@ -517,16 +543,16 @@ namespace Quartz.Tests.Unit.Impl.Triggers
             TimeOfDay startTimeOfDay = new TimeOfDay(8, 0, 0);
             TimeOfDay endTimeOfDay = new TimeOfDay(11, 0, 0);
             var trigger = new DailyTimeIntervalTriggerImpl
-                          {
-                              StartTimeUtc = startTime.ToUniversalTime(),
-                              StartTimeOfDay = startTimeOfDay,
-                              EndTimeOfDay = endTimeOfDay,
-                              RepeatIntervalUnit = IntervalUnit.Minute,
-                              RepeatInterval = 72,
-                              RepeatCount = 7
-                          };
+            {
+                StartTimeUtc = startTime.ToUniversalTime(),
+                StartTimeOfDay = startTimeOfDay,
+                EndTimeOfDay = endTimeOfDay,
+                RepeatIntervalUnit = IntervalUnit.Minute,
+                RepeatInterval = 72,
+                RepeatCount = 7
+            };
 
-            IList<DateTimeOffset> fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 48);
+            var fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 48);
             Assert.AreEqual(8, fireTimes.Count);
             Assert.AreEqual(DateBuilder.DateOf(8, 0, 0, 1, 1, 2011), fireTimes[0]);
             Assert.AreEqual(DateBuilder.DateOf(9, 12, 0, 3, 1, 2011), fireTimes[7]);
@@ -539,16 +565,16 @@ namespace Quartz.Tests.Unit.Impl.Triggers
             TimeOfDay startTimeOfDay = new TimeOfDay(8, 0, 0);
             TimeOfDay endTimeOfDay = new TimeOfDay(11, 0, 0);
             var trigger = new DailyTimeIntervalTriggerImpl
-                          {
-                              StartTimeUtc = startTime.ToUniversalTime(),
-                              StartTimeOfDay = startTimeOfDay,
-                              EndTimeOfDay = endTimeOfDay,
-                              RepeatIntervalUnit = IntervalUnit.Minute,
-                              RepeatInterval = 72,
-                              RepeatCount = 0
-                          };
+            {
+                StartTimeUtc = startTime.ToUniversalTime(),
+                StartTimeOfDay = startTimeOfDay,
+                EndTimeOfDay = endTimeOfDay,
+                RepeatIntervalUnit = IntervalUnit.Minute,
+                RepeatInterval = 72,
+                RepeatCount = 0
+            };
 
-            IList<DateTimeOffset> fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 48);
+            var fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 48);
             Assert.AreEqual(1, fireTimes.Count);
             Assert.AreEqual(DateBuilder.DateOf(8, 0, 0, 1, 1, 2011), fireTimes[0]);
         }
@@ -556,23 +582,23 @@ namespace Quartz.Tests.Unit.Impl.Triggers
         [Test]
         public void TestFollowsTimeZone1()
         {
-            TimeZoneInfo est = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+            TimeZoneInfo est = TimeZoneUtil.FindTimeZoneById("Eastern Standard Time");
 
             DateTimeOffset startTime = new DateTimeOffset(2012, 3, 9, 23, 0, 0, TimeSpan.FromHours(-5));
 
             TimeOfDay startTimeOfDay = new TimeOfDay(8, 0, 0);
             TimeOfDay endTimeOfDay = new TimeOfDay(11, 0, 0);
             var trigger = new DailyTimeIntervalTriggerImpl
-                          {
-                              StartTimeUtc = startTime.ToUniversalTime(),
-                              StartTimeOfDay = startTimeOfDay,
-                              EndTimeOfDay = endTimeOfDay,
-                              RepeatIntervalUnit = IntervalUnit.Hour,
-                              RepeatInterval = 1,
-                              TimeZone = est
-                          };
+            {
+                StartTimeUtc = startTime.ToUniversalTime(),
+                StartTimeOfDay = startTimeOfDay,
+                EndTimeOfDay = endTimeOfDay,
+                RepeatIntervalUnit = IntervalUnit.Hour,
+                RepeatInterval = 1,
+                TimeZone = est
+            };
 
-            IList<DateTimeOffset> fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 8);
+            var fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 8);
 
             DateTimeOffset expected0 = new DateTimeOffset(2012, 3, 10, 8, 0, 0, 0, TimeSpan.FromHours(-5));
             DateTimeOffset expected1 = new DateTimeOffset(2012, 3, 10, 9, 0, 0, 0, TimeSpan.FromHours(-5));
@@ -597,23 +623,23 @@ namespace Quartz.Tests.Unit.Impl.Triggers
         [Test]
         public void TestFollowsTimeZone2()
         {
-            TimeZoneInfo est = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+            TimeZoneInfo est = TimeZoneUtil.FindTimeZoneById("Eastern Standard Time");
 
             DateTimeOffset startTime = new DateTimeOffset(2012, 11, 2, 12, 0, 0, TimeSpan.FromHours(-4));
 
             TimeOfDay startTimeOfDay = new TimeOfDay(8, 0, 0);
             TimeOfDay endTimeOfDay = new TimeOfDay(11, 0, 0);
             var trigger = new DailyTimeIntervalTriggerImpl
-                          {
-                              StartTimeUtc = startTime.ToUniversalTime(),
-                              StartTimeOfDay = startTimeOfDay,
-                              EndTimeOfDay = endTimeOfDay,
-                              RepeatIntervalUnit = IntervalUnit.Hour,
-                              RepeatInterval = 1,
-                              TimeZone = est
-                          };
+            {
+                StartTimeUtc = startTime.ToUniversalTime(),
+                StartTimeOfDay = startTimeOfDay,
+                EndTimeOfDay = endTimeOfDay,
+                RepeatIntervalUnit = IntervalUnit.Hour,
+                RepeatInterval = 1,
+                TimeZone = est
+            };
 
-            IList<DateTimeOffset> fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 8);
+            var fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 8);
 
             DateTimeOffset expected0 = new DateTimeOffset(2012, 11, 3, 8, 0, 0, 0, TimeSpan.FromHours(-4));
             DateTimeOffset expected1 = new DateTimeOffset(2012, 11, 3, 9, 0, 0, 0, TimeSpan.FromHours(-4));
@@ -639,22 +665,24 @@ namespace Quartz.Tests.Unit.Impl.Triggers
         public void DayOfWeekPropertyShouldNotAffectOtherTriggers()
         {
             //make 2 trigger exactly the same
-            DailyTimeIntervalTriggerImpl trigger1 = new DailyTimeIntervalTriggerImpl()
-                                                    {
-                                                        RepeatInterval = 1,
-                                                        RepeatIntervalUnit = IntervalUnit.Hour
-                                                    };
+            DailyTimeIntervalTriggerImpl trigger1 = new DailyTimeIntervalTriggerImpl
+            {
+                RepeatInterval = 1,
+                RepeatIntervalUnit = IntervalUnit.Hour
+            };
 
-            DailyTimeIntervalTriggerImpl trigger2 = new DailyTimeIntervalTriggerImpl()
-                                                    {
-                                                        RepeatInterval = 1,
-                                                        RepeatIntervalUnit = IntervalUnit.Hour
-                                                    };
+            DailyTimeIntervalTriggerImpl trigger2 = new DailyTimeIntervalTriggerImpl
+            {
+                RepeatInterval = 1,
+                RepeatIntervalUnit = IntervalUnit.Hour
+            };
 
-            //make an adjustment to only one trigger. 
+            //make an adjustment to only one trigger.
             //I only want mondays now
-            trigger1.DaysOfWeek.Clear();
-            trigger1.DaysOfWeek.Add(DayOfWeek.Monday);
+            trigger1.DaysOfWeek = new List<DayOfWeek>
+            {
+                DayOfWeek.Monday
+            };
 
             //check trigger 2 DOW
             //this fails because the reference collection only contains MONDAY b/c it was cleared.
@@ -671,13 +699,13 @@ namespace Quartz.Tests.Unit.Impl.Triggers
         public void ValidateShouldSucceedWithValidIntervalUnitHourConfiguration()
         {
             var trigger = new DailyTimeIntervalTriggerImpl
-                          {
-                              Name = "name",
-                              Group = "group",
-                              JobName = "jobname",
-                              JobGroup = "jobgroup",
-                              RepeatIntervalUnit = IntervalUnit.Hour
-                          };
+            {
+                Name = "name",
+                Group = "group",
+                JobName = "jobname",
+                JobGroup = "jobgroup",
+                RepeatIntervalUnit = IntervalUnit.Hour
+            };
             trigger.Validate();
         }
 
@@ -722,13 +750,13 @@ namespace Quartz.Tests.Unit.Impl.Triggers
             trigger.RepeatInterval = 1;
 
             // NOTE that if you pass a date past the startTime, you will get the startTime back!
-            Assert.AreEqual(dateOf(0, 0, 0, 1, 1, 2012), trigger.GetFireTimeAfter(dateOf(0, 0, 0, 1, 1, 2011)));
-            Assert.AreEqual(dateOf(0, 0, 0, 1, 1, 2012), trigger.GetFireTimeAfter(dateOf(7, 0, 0, 1, 1, 2011)));
-            Assert.AreEqual(dateOf(0, 0, 0, 1, 1, 2012), trigger.GetFireTimeAfter(dateOf(7, 59, 59, 1, 1, 2011)));
-            Assert.AreEqual(dateOf(0, 0, 0, 1, 1, 2012), trigger.GetFireTimeAfter(dateOf(8, 0, 0, 1, 1, 2011)));
-            Assert.AreEqual(dateOf(0, 0, 0, 1, 1, 2012), trigger.GetFireTimeAfter(dateOf(9, 0, 0, 1, 1, 2011)));
-            Assert.AreEqual(dateOf(0, 0, 0, 1, 1, 2012), trigger.GetFireTimeAfter(dateOf(12, 59, 59, 1, 1, 2011)));
-            Assert.AreEqual(dateOf(0, 0, 0, 1, 1, 2012), trigger.GetFireTimeAfter(dateOf(13, 0, 0, 1, 1, 2011)));
+            Assert.AreEqual(dateOf(8, 0, 0, 1, 1, 2012), trigger.GetFireTimeAfter(dateOf(0, 0, 0, 1, 1, 2011)));
+            Assert.AreEqual(dateOf(8, 0, 0, 1, 1, 2012), trigger.GetFireTimeAfter(dateOf(7, 0, 0, 1, 1, 2011)));
+            Assert.AreEqual(dateOf(8, 0, 0, 1, 1, 2012), trigger.GetFireTimeAfter(dateOf(7, 59, 59, 1, 1, 2011)));
+            Assert.AreEqual(dateOf(8, 0, 0, 1, 1, 2012), trigger.GetFireTimeAfter(dateOf(8, 0, 0, 1, 1, 2011)));
+            Assert.AreEqual(dateOf(8, 0, 0, 1, 1, 2012), trigger.GetFireTimeAfter(dateOf(9, 0, 0, 1, 1, 2011)));
+            Assert.AreEqual(dateOf(8, 0, 0, 1, 1, 2012), trigger.GetFireTimeAfter(dateOf(12, 59, 59, 1, 1, 2011)));
+            Assert.AreEqual(dateOf(8, 0, 0, 1, 1, 2012), trigger.GetFireTimeAfter(dateOf(13, 0, 0, 1, 1, 2011)));
 
             // Now try some test times at or after startTime
             Assert.AreEqual(dateOf(8, 0, 0, 1, 1, 2012), trigger.GetFireTimeAfter(dateOf(0, 0, 0, 1, 1, 2012)));
@@ -789,6 +817,171 @@ namespace Quartz.Tests.Unit.Impl.Triggers
             Assert.AreEqual(new TimeOfDay(17, 0, 0), trigger.EndTimeOfDay);
             Assert.AreEqual(IntervalUnit.Hour, trigger.RepeatIntervalUnit);
             Assert.AreEqual(1, trigger.RepeatInterval);
+        }
+
+        [Test]
+        [Category("windowstimezoneid")]
+        public void TestDayLightSaving()
+        {
+            var timeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById("GMT Standard Time");
+
+            var trigger = DailyTimeIntervalScheduleBuilder.Create()
+                .StartingDailyAt(TimeOfDay.HourAndMinuteOfDay(22, 15))
+                .OnEveryDay()
+                .WithIntervalInHours(24)
+                .WithRepeatCount(9999)
+                .InTimeZone(timeZoneInfo)
+                .Build();
+
+            var first = trigger.GetFireTimeAfter(new DateTimeOffset(2014, 10, 25, 0, 0, 0, TimeSpan.Zero));
+            Assert.That(first, Is.EqualTo(new DateTimeOffset(2014, 10, 25, 22, 15, 0, TimeSpan.FromHours(1))));
+
+            var second = trigger.GetFireTimeAfter(first);
+            Assert.That(second, Is.EqualTo(new DateTimeOffset(2014, 10, 26, 22, 15, 0, TimeSpan.FromHours(0))));
+
+            var third = trigger.GetFireTimeAfter(second);
+            Assert.That(third, Is.EqualTo(new DateTimeOffset(2014, 10, 27, 22, 15, 0, TimeSpan.FromHours(0))));
+        }
+
+        [Test]
+        public void TestDayLightSaving2()
+        {
+            var timeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time");
+
+            var trigger = DailyTimeIntervalScheduleBuilder.Create()
+                .OnEveryDay()
+                .InTimeZone(timeZoneInfo)
+                .StartingDailyAt(TimeOfDay.HourAndMinuteOfDay(0, 0))
+                .WithIntervalInHours(4)
+                .Build();
+
+            var first = trigger.GetFireTimeAfter(new DateTimeOffset(2017, 3, 12, 9, 0, 0, TimeSpan.Zero));
+            Assert.That(first, !Is.EqualTo(new DateTimeOffset(2017, 3, 12, 9, 0, 0, TimeSpan.Zero)));
+        }
+
+        [Test]
+        public void TestDayLightSaving3()
+        {
+	        var timeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+	        //UTC: 2020/3/7/ 00:00  EST: 2020/3/6 19:00
+			var startTime = new DateTimeOffset(2020, 3, 7, 0, 0, 0, TimeSpan.Zero);
+	        var trigger = DailyTimeIntervalScheduleBuilder.Create()
+		        .StartingDailyAt(TimeOfDay.HourAndMinuteOfDay(17, 00))
+		        .EndingDailyAt(TimeOfDay.HourAndMinuteOfDay(19, 30))
+		        .OnDaysOfTheWeek(new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday })
+		        .WithIntervalInHours(2)
+		        .InTimeZone(timeZoneInfo)
+		        .Build();
+
+	        var first = trigger.GetFireTimeAfter(startTime);
+	        //UTC: 2020/3/9/ 21:00  EST: 2020/3/9 17:00
+			Assert.That(first, Is.EqualTo(new DateTimeOffset(2020, 3, 9, 21, 0, 0, TimeSpan.Zero)));
+        }
+
+        [Test]
+        public void TestDayLightSaving4()
+        {
+	        var timeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+			//UTC: 2019/11/1/ 23:00  EST: 2019/11/1 19:00
+			var startTime = new DateTimeOffset(2019, 11, 1, 23, 0, 0, TimeSpan.Zero);
+			var trigger = DailyTimeIntervalScheduleBuilder.Create()
+		        .StartingDailyAt(TimeOfDay.HourAndMinuteOfDay(17, 00))
+		        .EndingDailyAt(TimeOfDay.HourAndMinuteOfDay(19, 30))
+		        .OnDaysOfTheWeek(new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday })
+		        .WithIntervalInHours(2)
+		        .InTimeZone(timeZoneInfo)
+		        .Build();
+
+	        var first = trigger.GetFireTimeAfter(startTime);
+	        //UTC: 2019/11/4/ 22:00  EST: 2019/11/1 17:00
+			Assert.That(first, Is.EqualTo(new DateTimeOffset(2019, 11, 4, 22, 0, 0, TimeSpan.Zero)));
+        }
+
+		[Test]
+        [Explicit]
+        public void TestPassingMidnight()
+        {
+            IOperableTrigger trigger = (IOperableTrigger) DailyTimeIntervalScheduleBuilder.Create()
+                .StartingDailyAt(TimeOfDay.HourAndMinuteOfDay(16, 0))
+                .EndingDailyAt(TimeOfDay.HourMinuteAndSecondOfDay(23, 59, 59))
+                .OnEveryDay()
+                .WithIntervalInMinutes(30)
+                .Build();
+
+            trigger.StartTimeUtc = new DateTimeOffset(2015, 1, 11, 23, 57, 0, 0, TimeSpan.Zero);
+
+            var fireTimes = TriggerUtils.ComputeFireTimes(trigger, null, 100);
+            foreach (var fireTime in fireTimes)
+            {
+                // Console.WriteLine(fireTime.LocalDateTime);
+            }
+        }
+
+        [Test]
+        public void ShouldGetScheduleBuilderWithSameSettingsAsTrigger()
+        {
+            var startTime = DateTimeOffset.UtcNow;
+            var endTime = DateTimeOffset.UtcNow.AddDays(1);
+            var startTimeOfDay = new TimeOfDay(1, 2, 3);
+            var endTimeOfDay = new TimeOfDay(3, 2, 1);
+            var trigger = new DailyTimeIntervalTriggerImpl("name", "group", startTime, endTime, startTimeOfDay, endTimeOfDay, IntervalUnit.Hour, 10);
+            trigger.RepeatCount = 12;
+            trigger.DaysOfWeek = new List<DayOfWeek>
+            {
+                DayOfWeek.Thursday
+            };
+            trigger.MisfireInstruction = MisfireInstruction.DailyTimeIntervalTrigger.FireOnceNow;
+            trigger.TimeZone = TimeZoneInfo.Utc;
+
+            var scheduleBuilder = trigger.GetScheduleBuilder();
+
+            var cloned = (DailyTimeIntervalTriggerImpl) scheduleBuilder.Build();
+            CollectionAssert.AreEqual(cloned.DaysOfWeek, trigger.DaysOfWeek);
+            Assert.That(cloned.RepeatCount, Is.EqualTo(trigger.RepeatCount));
+            Assert.That(cloned.RepeatInterval, Is.EqualTo(trigger.RepeatInterval));
+            Assert.That(cloned.RepeatIntervalUnit, Is.EqualTo(trigger.RepeatIntervalUnit));
+            Assert.That(cloned.StartTimeOfDay, Is.EqualTo(trigger.StartTimeOfDay));
+            Assert.That(cloned.EndTimeOfDay, Is.EqualTo(trigger.EndTimeOfDay));
+            Assert.That(cloned.TimeZone, Is.EqualTo(trigger.TimeZone));
+        }
+
+        [Test(Description = "https://github.com/quartznet/quartznet/issues/382")]
+        public void ShouldAllowAlteringToLaterTimeInDay()
+        {
+            IJobDetail job = JobBuilder.Create<NoOpJob>()
+                .WithIdentity("DummyJob", "DEFAULT")
+                .Build();
+
+            ITrigger myTrigger = TriggerBuilder.Create()
+                .ForJob(job)
+                .WithIdentity("MyIdentity", "DEFAULT")
+                .WithDailyTimeIntervalSchedule(s => s
+                    .StartingDailyAt(new TimeOfDay(12, 0, 0))
+                    .EndingDailyAt(new TimeOfDay(15, 0, 0))
+                    .OnEveryDay()
+                )
+                .Build();
+
+            ((DailyTimeIntervalTriggerImpl)myTrigger).EndTimeOfDay = new TimeOfDay(16, 0, 0);
+        }
+
+        [Test]
+        public void TestInfinitiveLoop()
+        {
+            var trigger = (IOperableTrigger) TriggerBuilder.Create()
+                .WithDailyTimeIntervalSchedule(x => x
+                    .InTimeZone(TimeZoneInfo.FindSystemTimeZoneById("GTB Standard Time"))
+                    .StartingDailyAt(new TimeOfDay(0, 0, 0))
+                    .EndingDailyAt(new TimeOfDay(22, 0, 0))
+                    .WithInterval(15, IntervalUnit.Minute)
+                    .WithMisfireHandlingInstructionDoNothing()
+                )
+                .Build();
+
+            var from = new DateTimeOffset(2018, 3, 25, 0, 0, 0, TimeSpan.Zero);
+            var to = new DateTimeOffset(2018, 3, 27, 0, 0, 0, TimeSpan.Zero);
+            var times = TriggerUtils.ComputeFireTimesBetween(trigger, null, from, to);
+            Assert.That(times.Count, Is.LessThan(200));
         }
     }
 }

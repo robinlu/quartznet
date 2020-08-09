@@ -16,12 +16,11 @@ namespace Quartz.Util
         /// <param name="dictionary"></param>
         /// <param name="key"></param>
         /// <returns></returns>
-        public static TValue TryGetAndReturn<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, TKey key)
+        public static TValue? TryGetAndReturn<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, TKey key) where TKey : notnull where TValue : class
         {
-            TValue retValue;
-            if (!dictionary.TryGetValue(key, out retValue))
+            if (!dictionary.TryGetValue(key, out var retValue))
             {
-                retValue = default(TValue);
+                retValue = default;
             }
             return retValue;
         }

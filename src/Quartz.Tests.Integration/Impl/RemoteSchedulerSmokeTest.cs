@@ -1,4 +1,5 @@
 using System.Collections.Specialized;
+using System.Threading.Tasks;
 
 using NUnit.Framework;
 
@@ -11,7 +12,7 @@ namespace Quartz.Tests.Integration.Impl
     {
         [Test]
         [Explicit("Needs server from example 13 running to work")]
-        public void Test()
+        public async Task Test()
         {
             NameValueCollection properties = new NameValueCollection();
             properties["quartz.scheduler.instanceName"] = "RemoteClient";
@@ -21,16 +22,16 @@ namespace Quartz.Tests.Integration.Impl
             properties["quartz.threadPool.threadCount"] = "5";
             properties["quartz.threadPool.threadPriority"] = "Normal";
 
-            // set remoting expoter
+            // set remoting exporter
             properties["quartz.scheduler.proxy"] = "true";
             properties["quartz.scheduler.proxy.address"] = "tcp://127.0.0.1:555/QuartzScheduler";
 
             // First we must get a reference to a scheduler
             ISchedulerFactory sf = new StdSchedulerFactory(properties);
-            IScheduler sched = sf.GetScheduler();
+            IScheduler sched = await sf.GetScheduler();
 
             SmokeTestPerformer performer = new SmokeTestPerformer();
-            performer.Test(sched, true, true);
+            await performer.Test(sched, true, true);
         }
     }
 }

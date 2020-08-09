@@ -1,6 +1,6 @@
 #region License
 /* 
- * All content copyright Terracotta, Inc., unless otherwise indicated. All rights reserved. 
+ * All content copyright Marko Lahma, unless otherwise indicated. All rights reserved.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not 
  * use this file except in compliance with the License. You may obtain a copy 
@@ -17,7 +17,8 @@
  */
 #endregion
 
-using Common.Logging;
+using System.Threading;
+using System.Threading.Tasks;
 
 using Quartz.Spi;
 
@@ -41,25 +42,6 @@ namespace Quartz.Listener
     /// <seealso cref="IJobListener" />
     public abstract class JobListenerSupport : IJobListener
     {
-        private readonly ILog log;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="JobListenerSupport"/> class.
-        /// </summary>
-        protected JobListenerSupport()
-        {
-            log = LogManager.GetLogger(GetType());
-        }
-
-        /// <summary>
-        /// Get the <see cref="ILog" /> for this  class's category.  
-        /// This should be used by subclasses for logging.
-        /// </summary>
-        protected ILog Log
-        {
-            get { return log; }
-        }
-
         /// <summary>
         /// Get the name of the <see cref="IJobListener"/>.
         /// </summary>
@@ -69,28 +51,36 @@ namespace Quartz.Listener
         /// <summary>
         /// Called by the <see cref="IScheduler"/> when a <see cref="IJobDetail"/>
         /// is about to be executed (an associated <see cref="ITrigger"/>
-        /// has occured).
+        /// has occurred).
         /// <para>
         /// This method will not be invoked if the execution of the Job was vetoed
         /// by a <see cref="ITriggerListener"/>.
         /// </para>
         /// </summary>
         /// <param name="context"></param>
-        /// <seealso cref="JobExecutionVetoed(IJobExecutionContext)"/>
-        public virtual void JobToBeExecuted(IJobExecutionContext context)
+        /// <param name="cancellationToken">The cancellation instruction.</param>
+        /// <seealso cref="JobExecutionVetoed"/>
+        public virtual Task JobToBeExecuted(
+            IJobExecutionContext context, 
+            CancellationToken cancellationToken = default)
         {
+            return Task.CompletedTask;
         }
 
         /// <summary>
         /// Called by the <see cref="IScheduler"/> when a <see cref="IJobDetail"/>
         /// was about to be executed (an associated <see cref="ITrigger"/>
-        /// has occured), but a <see cref="ITriggerListener"/> vetoed it's
+        /// has occurred), but a <see cref="ITriggerListener"/> vetoed it's
         /// execution.
         /// </summary>
         /// <param name="context"></param>
-        /// <seealso cref="JobToBeExecuted(IJobExecutionContext)"/>
-        public virtual void JobExecutionVetoed(IJobExecutionContext context)
+        /// <param name="cancellationToken">The cancellation instruction.</param>
+        /// <seealso cref="JobToBeExecuted"/>
+        public virtual Task JobExecutionVetoed(
+            IJobExecutionContext context,
+            CancellationToken cancellationToken = default)
         {
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -100,8 +90,12 @@ namespace Quartz.Listener
         /// </summary>
         /// <param name="context"></param>
         /// <param name="jobException"></param>
-        public virtual void JobWasExecuted(IJobExecutionContext context, JobExecutionException jobException)
+        /// <param name="cancellationToken">The cancellation instruction.</param>
+        public virtual Task JobWasExecuted(IJobExecutionContext context,
+            JobExecutionException? jobException,
+            CancellationToken cancellationToken = default)
         {
+            return Task.CompletedTask;
         }
     }
 }

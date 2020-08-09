@@ -1,34 +1,33 @@
-﻿namespace Quartz.Impl.AdoJobStore
+﻿using System;
+
+namespace Quartz.Impl.AdoJobStore
 {
     /// <summary>
     /// Property name and value holder for trigger state data.
     /// </summary>
     public class TriggerPropertyBundle
     {
-        private readonly IScheduleBuilder sb;
-        private readonly string[] statePropertyNames;
-        private readonly object[] statePropertyValues;
-
-        public TriggerPropertyBundle(IScheduleBuilder sb, string[] statePropertyNames, object[] statePropertyValues)
+        public TriggerPropertyBundle(IScheduleBuilder sb)
+            : this(sb, Array.Empty<string>(), Array.Empty<object>())
         {
-            this.sb = sb;
-            this.statePropertyNames = statePropertyNames;
-            this.statePropertyValues = statePropertyValues;
         }
 
-        public IScheduleBuilder ScheduleBuilder
+        public TriggerPropertyBundle(IScheduleBuilder sb, string[]? statePropertyNames, object[]? statePropertyValues)
         {
-            get { return sb; }
+            ScheduleBuilder = sb;
+            StatePropertyNames = statePropertyNames ?? Array.Empty<string>();
+            StatePropertyValues = statePropertyValues ?? Array.Empty<object>();
+
+            if (StatePropertyNames.Length != StatePropertyValues.Length)
+            {
+                throw new ArgumentException("property names and values must be of same length");
+            }
         }
 
-        public string[] StatePropertyNames
-        {
-            get { return statePropertyNames; }
-        }
+        public IScheduleBuilder ScheduleBuilder { get; }
 
-        public object[] StatePropertyValues
-        {
-            get { return statePropertyValues; }
-        }
+        public string[] StatePropertyNames { get; }
+
+        public object[] StatePropertyValues { get; }
     }
 }

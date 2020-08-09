@@ -1,6 +1,6 @@
 #region License
 /* 
- * All content copyright Terracotta, Inc., unless otherwise indicated. All rights reserved. 
+ * All content copyright Marko Lahma, unless otherwise indicated. All rights reserved.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not 
  * use this file except in compliance with the License. You may obtain a copy 
@@ -29,17 +29,30 @@ namespace Quartz.Impl.AdoJobStore
 	/// <author>Marko Lahma (.NET)</author>
 	public static class AdoJobStoreUtil
 	{
-	    /// <summary>
-		/// Replace the table prefix in a query by replacing any occurrences of
-		/// "{0}" with the table prefix.
-		/// </summary>
-		/// <param name="query">The unsubstitued query</param>
-		/// <param name="tablePrefix">The table prefix</param>
-		/// <param name="schedNameLiteral">the scheduler name</param>
-		/// <returns>The query, with proper table prefix substituted</returns>
-		public static string ReplaceTablePrefix(string query, string tablePrefix, string schedNameLiteral)
-		{
-			return String.Format(CultureInfo.InvariantCulture, query, tablePrefix, schedNameLiteral);
-		}
-	}
+        /// <summary>
+        /// Replace the table prefix in a query by replacing any occurrences of
+        /// "{0}" with the table prefix.
+        /// </summary>
+        /// <param name="query">The unsubstituted query</param>
+        /// <param name="tablePrefix">The table prefix</param>
+        /// <param name="schedNameLiteral">the scheduler name - no longer required, scheduler name is now a sql parameter</param>
+        /// <returns>The query, with proper table prefix substituted</returns>
+        [Obsolete("Use overload with schedNameLiteral, scheduler name is now a sql parameter")]
+        public static string ReplaceTablePrefix(string query, string tablePrefix, string schedNameLiteral)
+        {
+            return string.Format(CultureInfo.InvariantCulture, query, tablePrefix, schedNameLiteral);
+        }
+
+        /// <summary>
+        /// Replace the table prefix in a query by replacing any occurrences of
+        /// "{0}" with the table prefix.
+        /// </summary>
+        /// <param name="query">The unsubstituted query</param>
+        /// <param name="tablePrefix">The table prefix</param>
+        /// <returns>The query, with proper table prefix substituted</returns>
+        public static string ReplaceTablePrefix(string query, string tablePrefix)
+        {
+            return string.Format(CultureInfo.InvariantCulture, query, tablePrefix);
+        }
+    }
 }

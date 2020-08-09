@@ -1,7 +1,7 @@
 #region License
 
 /* 
- * All content copyright Terracotta, Inc., unless otherwise indicated. All rights reserved. 
+ * All content copyright Marko Lahma, unless otherwise indicated. All rights reserved.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not 
  * use this file except in compliance with the License. You may obtain a copy 
@@ -47,7 +47,7 @@ namespace Quartz
     /// <seealso cref="ITrigger"/>
     /// <author>James House</author>
     /// <author>Marko Lahma (.NET)</author>
-    public interface IJobDetail : ICloneable
+    public interface IJobDetail
     {
         /// <summary>
         /// The key that identifies this jobs uniquely.
@@ -58,7 +58,7 @@ namespace Quartz
         /// Get or set the description given to the <see cref="IJob" /> instance by its
         /// creator (if any).
         /// </summary>
-        string Description { get; }
+        string? Description { get; }
 
         /// <summary>
         /// Get or sets the instance of <see cref="IJob" /> that will be executed.
@@ -95,7 +95,7 @@ namespace Quartz
         bool ConcurrentExecutionDisallowed { get; }
 
         /// <summary>
-        /// Set whether or not the the <see cref="IScheduler" /> should re-Execute
+        /// Set whether or not the <see cref="IScheduler" /> should re-Execute
         /// the <see cref="IJob" /> if a 'recovery' or 'fail-over' situation is
         /// encountered.
         /// </summary>
@@ -110,5 +110,7 @@ namespace Quartz
         /// <see cref="IJobDetail" /> identical to this one.
         /// </summary>
         JobBuilder GetJobBuilder();
+
+        IJobDetail Clone();
     }
 }

@@ -14,14 +14,25 @@ namespace Quartz.Simpl
         /// Gets or sets the remote scheduler address.
         /// </summary>
         /// <value>The remote scheduler address.</value>
-        public string Address { private get; set; }
+        public string? Address { private get; set; }
 
         /// <summary>
         /// Returns a client proxy to a remote <see cref="IRemotableQuartzScheduler" />.
         /// </summary>
-        public IRemotableQuartzScheduler GetProxy()
+        public IRemotableQuartzScheduler? GetProxy()
         {
-            return (IRemotableQuartzScheduler) Activator.GetObject(typeof(IRemotableQuartzScheduler), Address);
+            if (string.IsNullOrWhiteSpace(Address))
+            {
+                throw new InvalidOperationException("Address hasn't been configured");
+            }
+            
+#if REMOTING
+            return (IRemotableQuartzScheduler) System.Activator.GetObject(typeof(IRemotableQuartzScheduler), Address);
+#else // REMOTING
+            // TODO (NetCore Port): Return a new 'HttpQuartzScheduler' type which is the client that will make requests to a remote scheduler
+            //                      This new type would then be what is wrapped by RemoteScheduler to make remote calls.
+            return null;
+#endif // REMOTING
         }
     }
 }

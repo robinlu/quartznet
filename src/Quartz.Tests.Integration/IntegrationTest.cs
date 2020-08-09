@@ -1,6 +1,6 @@
 #region License
 /* 
- * All content copyright Terracotta, Inc., unless otherwise indicated. All rights reserved. 
+ * All content copyright Marko Lahma, unless otherwise indicated. All rights reserved.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not 
  * use this file except in compliance with the License. You may obtain a copy 
@@ -17,9 +17,9 @@
  */
 #endregion
 
-using Common.Logging;
-
 using NUnit.Framework;
+
+using Quartz.Logging;
 
 namespace Quartz.Tests.Integration
 {
@@ -31,23 +31,19 @@ namespace Quartz.Tests.Integration
     public abstract class IntegrationTest
     {
         protected IScheduler sched;
-        private readonly ILog log;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="IntegrationTest"/> class.
         /// </summary>
         protected IntegrationTest()
         {
-            log = LogManager.GetLogger(GetType());
+            Log = LogProvider.GetLogger(GetType());
         }
 
         /// <summary>
         /// Gets the log.
         /// </summary>
         /// <value>The log.</value>
-        protected ILog Log
-        {
-            get { return log; }
-        }
+        internal ILog Log { get; }
     }
 }

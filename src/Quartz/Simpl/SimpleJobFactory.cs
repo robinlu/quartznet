@@ -1,6 +1,6 @@
 #region License
 /* 
- * All content copyright Terracotta, Inc., unless otherwise indicated. All rights reserved. 
+ * All content copyright Marko Lahma, unless otherwise indicated. All rights reserved.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not 
  * use this file except in compliance with the License. You may obtain a copy 
@@ -18,10 +18,8 @@
 #endregion
 
 using System;
-using System.Globalization;
 
-using Common.Logging;
-
+using Quartz.Logging;
 using Quartz.Spi;
 using Quartz.Util;
 
@@ -37,7 +35,7 @@ namespace Quartz.Simpl
 	/// <author>Marko Lahma (.NET)</author>
 	public class SimpleJobFactory : IJobFactory
 	{
-		private static readonly ILog log = LogManager.GetLogger(typeof (SimpleJobFactory));
+		private static readonly ILog log = LogProvider.GetLogger(typeof (SimpleJobFactory));
 
 	    /// <summary>
 	    /// Called by the scheduler at the time of the trigger firing, in order to
@@ -45,12 +43,12 @@ namespace Quartz.Simpl
 	    /// </summary>
 	    /// <remarks>
 	    /// It should be extremely rare for this method to throw an exception -
-	    /// basically only the the case where there is no way at all to instantiate
+	    /// basically only the case where there is no way at all to instantiate
 	    /// and prepare the Job for execution.  When the exception is thrown, the
 	    /// Scheduler will move all triggers associated with the Job into the
 	    /// <see cref="TriggerState.Error" /> state, which will require human
 	    /// intervention (e.g. an application restart after fixing whatever
-	    /// configuration problem led to the issue wih instantiating the Job.
+	    /// configuration problem led to the issue with instantiating the Job).
 	    /// </remarks>
 	    /// <param name="bundle">The TriggerFiredBundle from which the <see cref="IJobDetail" />
 	    ///   and other info relating to the trigger firing can be obtained.</param>
@@ -63,26 +61,28 @@ namespace Quartz.Simpl
 			Type jobType = jobDetail.JobType;
 			try
 			{
-				if (log.IsDebugEnabled)
+				if (log.IsDebugEnabled())
 				{
-					log.Debug(string.Format(CultureInfo.InvariantCulture, "Producing instance of Job '{0}', class={1}", jobDetail.Key, jobType.FullName));
+					log.Debug($"Producing instance of Job '{jobDetail.Key}', class={jobType.FullName}");
 				}
 
 				return ObjectUtils.InstantiateType<IJob>(jobType);
 			}
 			catch (Exception e)
 			{
-				SchedulerException se = new SchedulerException(string.Format(CultureInfo.InvariantCulture, "Problem instantiating class '{0}'", jobDetail.JobType.FullName), e);
+				SchedulerException se = new SchedulerException($"Problem instantiating class '{jobDetail.JobType.FullName}: {e.Message}'", e);
 				throw se;
 			}
 		}
 
 	    /// <summary>
-	    /// Allows the the job factory to destroy/cleanup the job if needed. 
+	    /// Allows the job factory to destroy/cleanup the job if needed. 
 	    /// No-op when using SimpleJobFactory.
 	    /// </summary>
 	    public virtual void ReturnJob(IJob job)
 	    {
+	        var disposable = job as IDisposable;
+	        disposable?.Dispose();
 	    }
 	}
 }
